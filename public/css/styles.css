@@ -106,6 +106,17 @@ button.secondary:hover {
   opacity: 0.5;
 }
 
+.leaderboard-list li.self {
+  background: #e8eaff;
+  border: 2px solid #667eea;
+}
+
+.you-tag {
+  color: #667eea;
+  font-weight: normal;
+  font-size: 0.85em;
+}
+
 .leaderboard-list .rank {
   font-weight: bold;
   color: #667eea;

@@ -44,10 +44,12 @@ function showGame() {
 
 function renderLeaderboard(players) {
   leaderboardEl.innerHTML = '';
-  players.forEach((p, i) => {
+  players.forEach((p) => {
     const li = document.createElement('li');
     if (!p.connected) li.classList.add('disconnected');
-    li.innerHTML = `<span class="rank">#${i + 1}</span><span class="name">${escapeHtml(p.name)}</span><span class="score">${p.score}</span>`;
+    if (p.id === playerId) li.classList.add('self');
+    const youTag = p.id === playerId ? ' <span class="you-tag">(you)</span>' : '';
+    li.innerHTML = `<span class="rank">#${p.rank}</span><span class="name">${escapeHtml(p.name)}${youTag}</span><span class="score">${p.score}</span>`;
     leaderboardEl.appendChild(li);
   });
 }

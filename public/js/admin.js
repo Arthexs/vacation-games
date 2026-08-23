@@ -17,10 +17,10 @@ function escapeHtml(str) {
 
 function renderLeaderboard(players) {
   leaderboardEl.innerHTML = '';
-  players.forEach((p, i) => {
+  players.forEach((p) => {
     const li = document.createElement('li');
     if (!p.connected) li.classList.add('disconnected');
-    li.innerHTML = `<span class="rank">#${i + 1}</span><span class="name">${escapeHtml(p.name)}</span><span class="score">${p.score}</span>`;
+    li.innerHTML = `<span class="rank">#${p.rank}</span><span class="name">${escapeHtml(p.name)}</span><span class="score">${p.score}</span>`;
     leaderboardEl.appendChild(li);
   });
 }

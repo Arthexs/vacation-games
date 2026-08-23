@@ -7,9 +7,21 @@ function publicPlayer(player) {
 }
 
 function getLeaderboard(state) {
-  return Object.values(state.players)
+  const sorted = Object.values(state.players)
     .map(publicPlayer)
     .sort((a, b) => b.score - a.score);
+
+  // Competition ranking (1, 1, 3, 4): tied scores share a rank, and the next
+  // distinct score skips ahead by however many players tied for the rank before it.
+  let rank = 0;
+  let previousScore = null;
+  return sorted.map((player, index) => {
+    if (player.score !== previousScore) {
+      rank = index + 1;
+      previousScore = player.score;
+    }
+    return { ...player, rank };
+  });
 }
 
 function getActiveGamePayload(state) {
