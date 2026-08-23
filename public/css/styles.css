@@ -132,6 +132,28 @@ button.secondary:hover {
   font-weight: bold;
 }
 
+.score-override-input {
+  width: 4.5em;
+  margin-left: 10px;
+  padding: 6px 8px;
+  border: 2px solid #ddd;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+.score-override-input:focus {
+  outline: none;
+  border-color: #667eea;
+}
+
+.score-override-btn {
+  width: auto;
+  padding: 6px 14px;
+  margin-top: 0;
+  margin-left: 8px;
+  font-size: 14px;
+}
+
 .tv-body {
   align-items: center;
   padding: 30px;

@@ -25,6 +25,24 @@ function renderLeaderboard(players) {
     const li = document.createElement('li');
     if (!p.connected) li.classList.add('disconnected');
     li.innerHTML = `<span class="rank">#${p.rank}</span><span class="name">${escapeHtml(p.name)}</span><span class="score">${p.score}</span>`;
+
+    const scoreInput = document.createElement('input');
+    scoreInput.type = 'number';
+    scoreInput.className = 'score-override-input';
+    scoreInput.value = p.score;
+
+    const setBtn = document.createElement('button');
+    setBtn.type = 'button';
+    setBtn.className = 'score-override-btn';
+    setBtn.textContent = 'Set';
+    setBtn.addEventListener('click', () => {
+      const score = Number(scoreInput.value);
+      if (!Number.isFinite(score)) return;
+      socket.emit('admin:setScore', { playerId: p.id, score });
+    });
+
+    li.appendChild(scoreInput);
+    li.appendChild(setBtn);
     leaderboardEl.appendChild(li);
   });
 }

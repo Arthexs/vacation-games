@@ -37,4 +37,13 @@ module.exports = function registerAdminSocket(io, socket, state, gamesById) {
     broadcastActiveGame(io, state);
     broadcastLeaderboard(io, state);
   });
+
+  // Manual override — e.g. restoring a score after a player's phone/app crashed
+  // mid-game. Sets the score directly rather than adding/subtracting.
+  socket.on('admin:setScore', ({ playerId, score } = {}) => {
+    const player = state.players[playerId];
+    if (!player || !Number.isFinite(score)) return;
+    player.score = score;
+    broadcastLeaderboard(io, state);
+  });
 };
