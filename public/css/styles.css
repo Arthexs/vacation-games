@@ -4,6 +4,12 @@
   box-sizing: border-box;
 }
 
+/* Without this, elements that also set their own `display` (e.g. .lobby-card's
+   display: flex) override the browser's built-in [hidden] rule and stay visible. */
+[hidden] {
+  display: none !important;
+}
+
 body {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
