@@ -1,0 +1,222 @@
+/* static/styles.css */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    padding: 20px;
+    justify-content: center;
+    align-items: center;
+}
+.container {
+    background: white;
+    border-radius: 20px;
+    padding: 30px;
+    max-width: 500px;
+    width: calc(100% - 40px);
+    margin: 40px auto;      /* important: margin creates background "frame" */
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    box-sizing: border-box;
+}
+
+h1 {
+    color: #667eea;
+    text-align: center;
+    margin-bottom: 10px;
+    font-size: 2em;
+}
+.progress {
+    text-align: center;
+    color: #666;
+    margin-bottom: 30px;
+    font-size: 1.1em;
+}
+.clue-box {
+    background: #f7f7f7;
+    border-left: 4px solid #667eea;
+    padding: 20px;
+    margin-bottom: 20px;
+    border-radius: 8px;
+}
+.clue-box h2 {
+    color: #333;
+    margin-bottom: 15px;
+    font-size: 1.3em;
+}
+input[type="text"] {
+    width: 100%;
+    padding: 15px;
+    border: 2px solid #ddd;
+    border-radius: 10px;
+    font-size: 16px;
+    transition: border-color 0.3s;
+}
+input[type="text"]:focus {
+    outline: none;
+    border-color: #667eea;
+}
+button, a.button {
+    width: 100%;
+    padding: 15px;
+    background: #667eea;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 18px;
+    font-weight: bold;
+    cursor: pointer;
+    margin-top: 15px;
+    transition: background 0.3s;
+    text-decoration: none; /* For a tags */
+    display: block; /* For a tags */
+    text-align: center;
+}
+button:hover, a.button:hover {
+    background: #5568d3;
+}
+.hint-btn {
+    background: #ffa500;
+    margin-top: 10px;
+}
+.hint-btn:hover {
+    background: #ff8c00;
+}
+.hint {
+    background: #fff3cd;
+    border: 1px solid #ffc107;
+    padding: 15px;
+    margin-top: 15px;
+    border-radius: 8px;
+    color: #856404;
+}
+.error {
+    background: #f8d7da;
+    border: 1px solid #f5c6cb;
+    padding: 15px;
+    margin-top: 15px;
+    border-radius: 8px;
+    color: #721c24;
+}
+.treasure {
+    text-align: center;
+    padding: 40px 20px;
+}
+.treasure h2 {
+    font-size: 2.5em;
+    color: #667eea;
+    margin-bottom: 20px;
+}
+.reset-btn {
+    background: #6c757d;
+    margin-top: 20px;
+}
+.reset-btn:hover {
+    background: #5a6268;
+}
+
+/* Specific styles for clue phone */
+.clue-phone-body {
+    background: #333;
+    color: white;
+    display: block;
+}
+.clue-phone-container {
+    background: #333;
+    color: white;
+    text-align: center;
+    padding: 20px;
+    max-width: 100%;
+    box-shadow: none;
+}
+.code-display {
+    background: #ffa500;
+    color: #333;
+    padding: 30px 40px;
+    border-radius: 15px;
+    font-size: 2em;
+    font-weight: bold;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    margin: 20px 0;
+}
+.qr-box {
+    margin-top: 30px;
+    background: white;
+    padding: 15px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.qr-box img {
+    display: block;
+}
+.instructions {
+    margin-top: 40px;
+    font-size: 1.2em;
+    color: #ccc;
+    max-width: 400px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+/* Fullscreen pages still get a centered container, but slimmer */
+.hl-body,
+.centered-body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    padding: 20px; /* keep some breathing room on small devices */
+}
+
+.fullscreen-card {
+    height: 100vh;
+    margin: 0;               /* fills the viewport */
+    border-radius: 0;        /* no rounded corners if full screen */
+}
+
+/* Replace the default large card with a trimmed, mobile-friendly one */
+.hl-no-card {
+    background: white !important;
+    border-radius: 16px !important;
+    padding: 18px !important;
+    width: 100% !important;
+    max-width: 420px !important; /* visually smaller than full width */
+    margin: 20px auto !important;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.2) !important;
+
+    /* allow the inner game to scroll if needed */
+    max-height: calc(100vh - 40px);
+    overflow-y: auto;
+}
+
+/* Scroll challenge’s floating white card */
+.scrollcard {
+    background: white !important;
+    border-radius: 16px !important;
+    padding: 18px !important;
+    width: 100% !important;
+    max-width: 420px !important;
+    margin: 20px auto !important;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.2) !important;
+
+    /* PAGE scrolls, not the card */
+    overflow: visible !important;
+    max-height: none !important;
+}
+.container * {
+    box-sizing: border-box;
+    max-width: 100%;
+}
+
+/* Utility to center the outside-button (button that sits outside the .container) */
+.outside-button-wrapper {
+    max-width: 540px;
+    margin: 16px auto;
+    padding: 0 20px;
+    text-align: center;
+}

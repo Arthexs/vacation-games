@@ -1,0 +1,297 @@
+{% extends "base.html" %}
+
+{% block head_extra %}
+<style>
+    /* Full viewport height, no scroll on body */
+    html, body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+    }
+    
+    .container {
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        margin: 15px auto 40px auto;
+        padding: 20px;
+        height: calc(100vh - 55px);
+        max-width: 600px;
+        box-sizing: border-box;
+        overflow: hidden;
+    }
+    
+    .hl-container {
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        min-height: 100%;
+    }
+    
+    .hl-header {
+        flex-shrink: 0;
+    }
+    
+    .hl-title {
+        font-size: 24px;
+        margin-bottom: 5px;
+        margin-top: 0;
+    }
+    
+    .hl-score {
+        font-size: 16px;
+        color: #666;
+        margin-bottom: 10px;
+    }
+    
+    .hl-instruction {
+        font-size: 14px;
+        margin-bottom: 15px;
+        color: #555;
+    }
+    
+    .comparison-container {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+        max-width: 500px;
+        margin: 0 auto;
+        flex-shrink: 0;
+    }
+    
+    .topic-card {
+        background: white;
+        border-radius: 15px;
+        padding: 20px 15px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        transition: all 0.3s ease;
+    }
+    
+    .topic-card.known {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+    
+    .topic-card.revealed {
+        background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+        color: white;
+        animation: reveal 0.5s ease;
+    }
+    
+    .topic-card.wrong {
+        background: linear-gradient(135deg, #ee0979 0%, #ff6a00 100%);
+        color: white;
+        animation: shake 0.5s ease;
+    }
+    
+    @keyframes reveal {
+        0% { transform: scale(0.9); opacity: 0.5; }
+        100% { transform: scale(1); opacity: 1; }
+    }
+    
+    @keyframes shake {
+        0%, 100% { transform: translateX(0); }
+        25% { transform: translateX(-10px); }
+        75% { transform: translateX(10px); }
+    }
+    
+    .topic-name {
+        font-size: 26px;
+        font-weight: bold;
+        margin-bottom: 10px;
+    }
+    
+    .search-count {
+        font-size: 18px;
+        color: #FFD700;
+    }
+    
+    .vs-text {
+        font-size: 20px;
+        font-weight: bold;
+        color: #999;
+        margin: 10px 0;
+    }
+    
+    .topic-card.unknown {
+        background: #f5f5f5;
+    }
+    
+    .unknown .topic-name {
+        color: #333;
+    }
+    
+    .search-count-hidden {
+        font-size: 36px;
+        color: #ddd;
+    }
+    
+    .button-container {
+        display: flex;
+        gap: 10px;
+        justify-content: center;
+        margin-top: 15px;
+        flex-shrink: 0;
+    }
+    
+    .guess-button {
+        flex: 1;
+        max-width: 150px;
+        padding: 15px;
+        font-size: 18px;
+        border: none;
+        border-radius: 10px;
+        cursor: pointer;
+        font-weight: bold;
+        transition: transform 0.2s;
+    }
+    
+    .guess-button:active {
+        transform: scale(0.95);
+    }
+    
+    .guess-button.higher {
+        background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+        color: white;
+    }
+    
+    .guess-button.lower {
+        background: linear-gradient(135deg, #ee0979 0%, #ff6a00 100%);
+        color: white;
+    }
+    
+    .continue-button {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 15px 30px;
+        font-size: 16px;
+        border: none;
+        border-radius: 10px;
+        cursor: pointer;
+        font-weight: bold;
+        margin-top: 15px;
+    }
+    
+    .result-message {
+        font-size: 20px;
+        font-weight: bold;
+        margin: 10px 0;
+    }
+    
+    .result-message.correct {
+        color: #38ef7d;
+    }
+    
+    .result-message.wrong {
+        color: #ee0979;
+    }
+    
+    .retry-button {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        color: white;
+        padding: 15px 30px;
+        font-size: 16px;
+        border: none;
+        border-radius: 10px;
+        cursor: pointer;
+        font-weight: bold;
+        margin-top: 15px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="hl-container">
+    <div class="hl-header">
+        <h1 class="hl-title">{{ config.title }}</h1>
+        <div class="hl-score">Score: {{ score }} / {{ config.win_count }}</div>
+        <p class="hl-instruction">{{ config.instruction }}</p>
+    </div>
+    
+    {% if show_result %}
+        <!-- Show result -->
+        {% if last_correct %}
+            <div class="result-message correct">✅ Correct!</div>
+        {% else %}
+            <div class="result-message wrong">❌ Fout! Game Over</div>
+        {% endif %}
+        
+        <div class="comparison-container">
+            <div class="topic-card known">
+                <div class="topic-name">{{ current_topic.name }}</div>
+                <div class="search-count" data-params="{{ current_topic.params }}"></div>
+            </div>
+            
+            <div class="vs-text">VS</div>
+            
+            <div class="topic-card {% if last_correct %}revealed{% else %}wrong{% endif %}">
+                <div class="topic-name">{{ next_topic.name }}</div>
+                <div class="search-count" data-params="{{ next_topic.params }}"></div>
+            </div>
+        </div>
+        
+        {% if last_correct %}
+            <form method="POST" action="{{ url_for('higher_lower_continue') }}">
+                <button type="submit" class="continue-button">Volgende →</button>
+            </form>
+        {% else %}
+            <form method="GET" action="{{ url_for('higher_lower_game') }}">
+                <input type="hidden" name="reset" value="1">
+                <button type="submit" class="retry-button">Opnieuw proberen</button>
+            </form>
+        {% endif %}
+    {% else %}
+        <!-- Show game -->
+        <div class="comparison-container">
+            <div class="topic-card known">
+                <div class="topic-name">{{ current_topic.name }}</div>
+                <div class="search-count" data-params="{{ current_topic.params }}"></div>
+            </div>
+            
+            <div class="vs-text">VS</div>
+            
+            <div class="topic-card unknown">
+                <div class="topic-name">{{ next_topic.name }}</div>
+                <div class="search-count-hidden">???</div>
+            </div>
+        </div>
+        
+        <form method="POST" action="{{ url_for('higher_lower_game') }}">
+            <div class="button-container">
+                <button type="submit" name="guess" value="higher" class="guess-button higher">
+                    ⬆️ HOGER
+                </button>
+                <button type="submit" name="guess" value="lower" class="guess-button lower">
+                    ⬇️ LAGER
+                </button>
+            </div>
+        </form>
+    {% endif %}
+</div>
+
+<script>
+    // Format large numbers in Dutch
+    function formatParams(params) {
+        if (params >= 1_000_000_000_000) {
+            return (params / 1_000_000_000_000).toFixed(1).replace('.0', '') + ' biljoen';
+        } else if (params >= 1_000_000_000) {
+            return (params / 1_000_000_000).toFixed(1).replace('.0', '') + ' miljard';
+        } else if (params >= 1_000_000) {
+            return (params / 1_000_000).toFixed(1).replace('.0', '') + ' miljoen';
+        } else if (params >= 1_000) {
+            return (params / 1_000).toFixed(1).replace('.0', '') + ' duizend';
+        }
+        return params.toString();
+    }
+    
+    // Format all parameter counts on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('[data-params]').forEach(function(el) {
+            const params = parseInt(el.getAttribute('data-params'));
+            el.textContent = formatParams(params);
+        });
+    });
+</script>
+{% endblock %}

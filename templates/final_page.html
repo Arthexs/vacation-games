@@ -1,0 +1,191 @@
+{% extends "base.html" %}
+
+{% block head_extra %}
+<style>
+    /* ADDED: Full viewport height, no scroll on body/html */
+    html, body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+    }
+
+    .container {
+        /* ADDED: Ensure the container also takes up the available vertical space */
+        height: calc(100vh - 55px);
+        max-width: 600px;
+        box-sizing: border-box;
+        margin: 15px auto 40px auto; /* Existing margin */
+        padding: 20px; /* Existing padding */
+        overflow: hidden;
+    }
+
+    .final-wrapper {
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        /* UPDATED: Changed min-height to height: 100% to fill .container */
+        height: 100%;
+        justify-content: center;
+        padding: 20px;
+    }
+
+    .celebration-box {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 20px;
+        padding: 40px 30px;
+        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        max-width: 550px;
+        margin: 0 auto;
+        color: white;
+    }
+
+    .trophy {
+        font-size: 80px;
+        animation: bounce 2s infinite;
+    }
+
+    @keyframes bounce {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-15px); }
+    }
+
+    .final-title {
+        font-size: 32px;
+        margin-top: 10px;
+        margin-bottom: 10px;
+        font-weight: bold;
+    }
+
+    .final-message {
+        font-size: 20px;
+        margin-top: 10px;
+        font-weight: 600;
+    }
+
+    .final-subtitle {
+        font-size: 16px;
+        margin-bottom: 25px;
+        opacity: 0.9;
+    }
+
+    .location-box {
+        background: rgba(255,255,255,0.2); /* Slightly darker background */
+        padding: 25px 20px;
+        border-radius: 15px;
+        margin-top: 30px; /* More space above */
+        border: 2px solid #FFD700; /* Gold border for extra emphasis */
+    }
+    
+    .location-text-label {
+        font-size: 18px;
+        font-weight: 400;
+        opacity: 0.9;
+        margin-bottom: 8px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+
+    .location-text-value {
+        font-size: 36px; /* Much larger font size */
+        font-weight: 900; /* Extra bold */
+        color: #FFD700; /* Bright gold color for maximum impact */
+        text-shadow: 0 0 10px rgba(0,0,0,0.5); /* Subtle shadow for depth */
+        line-height: 1.1;
+    }
+
+    .stats {
+        background: rgba(255,255,255,0.15);
+        padding: 20px;
+        border-radius: 12px;
+        text-align: left;
+        margin-top: 20px;
+    }
+
+    .stat-item {
+        margin: 8px 0;
+        font-size: 16px;
+    }
+
+    /* Confetti dots - Added shape variations */
+    .confetti-piece {
+        position: fixed;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        animation: fall 3s linear infinite;
+        pointer-events: none;
+        z-index: 9999;
+        /* ADDED: Initial rotation for better visual spread */
+        transform-origin: center;
+    }
+    
+    .confetti-piece.square {
+        width: 10px;
+        height: 10px;
+        border-radius: 2px;
+    }
+
+    @keyframes fall {
+        0% { transform: translateY(-120vh) rotate(0); opacity: 1; }
+        100% { transform: translateY(120vh) rotate(720deg); opacity: 0.8; } /* Increased rotation */
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="final-wrapper">
+    <div class="celebration-box">
+        <div class="trophy">{{ config.emoji }}</div>
+
+        <h1 class="final-title">{{ config.title }}</h1>
+        <p class="final-message">{{ config.main_message }}</p>
+        <p class="final-subtitle">{{ config.subtitle }}</p>
+
+        <div class="location-box">
+            <div class="location-text-label">{{ config.location_text }}</div>
+            <div class="location-text-value">{{ config.location }}</div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Smooth confetti effect
+    function launchConfetti() {
+        const colors = ["#ff4757", "#ffa502", "#2ed573", "#1e90ff", "#e84393", "#f1c40f", "#ffffff", "#9b59b6"];
+        const numPieces = 80; // Significantly increased pieces per launch
+
+        for (let i = 0; i < numPieces; i++) {
+            const piece = document.createElement("div");
+            
+            // Randomly choose between circle and square
+            const isSquare = Math.random() < 0.3;
+            piece.className = "confetti-piece" + (isSquare ? " square" : "");
+
+            // position
+            piece.style.left = Math.random() * 100 + "vw";
+            // Start the fall at different vertical positions
+            piece.style.top = Math.random() * -100 + "vh"; 
+            
+            // Random size variation
+            const size = (Math.random() * 6) + 6; // between 6px and 12px
+            piece.style.width = size + "px";
+            piece.style.height = size + "px";
+
+            // color
+            piece.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+
+            // speed and rotation variation
+            piece.style.animationDuration = (2 + Math.random() * 3) + "s"; // 2s to 5s
+            piece.style.animationDelay = (Math.random() * 0.5) + "s"; // Stagger the start
+
+            document.body.appendChild(piece);
+
+            setTimeout(() => piece.remove(), 5500); // Remove after animation duration + a buffer
+        }
+    }
+
+    launchConfetti();
+    setInterval(launchConfetti, 1000); // More frequent launches for continuous celebration
+</script>
+{% endblock %}

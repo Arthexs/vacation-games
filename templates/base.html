@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Treasure Hunt</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    {% block head_extra %}{% endblock %}
+</head>
+<body>
+    {% block body_content %}
+        <div class="container">
+            {% block content %}{% endblock %}
+        </div>
+    {% endblock %}
+
+    <script>
+        // Disable back button functionality globally
+        history.pushState(null, null, location.href);
+        window.onpopstate = function () {
+            history.pushState(null, null, location.href);
+        };
+
+        // Prevent swipe back gesture on iOS
+        let startX = 0;
+        document.addEventListener('touchstart', function(e) {
+            startX = e.touches[0].pageX;
+        }, { passive: false });
+
+        document.addEventListener('touchmove', function(e) {
+            let currentX = e.touches[0].pageX;
+            let diff = currentX - startX;
+
+            // If swiping from left edge (back gesture)
+            if (startX < 50 && diff > 50) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+    </script>
+</body>
+</html>

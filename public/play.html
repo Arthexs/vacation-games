@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Play — Vacation Games</title>
+<link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+  <div class="card">
+    <div id="joinSection">
+      <h1>Vacation Games</h1>
+      <p class="subtitle">Enter your name to join</p>
+      <input type="text" id="nameInput" placeholder="Your name" maxlength="20">
+      <button id="joinBtn">Join</button>
+    </div>
+
+    <div id="leaderboardSection" hidden>
+      <h1>Leaderboard</h1>
+      <p class="subtitle">Waiting for the next game...</p>
+      <ul class="leaderboard-list" id="leaderboard"></ul>
+    </div>
+
+    <div id="gameSection" hidden></div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/play.js"></script>
+</body>
+</html>

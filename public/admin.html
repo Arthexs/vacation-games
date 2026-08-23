@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin — Vacation Games</title>
+<link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+  <div class="card">
+    <h1>Admin</h1>
+    <p class="subtitle">Control room — pick a game, start it, end it.</p>
+
+    <div id="activeGameSection" hidden>
+      <p class="status-banner active" id="activeGameBanner"></p>
+      <button id="endGameBtn">End Game</button>
+    </div>
+
+    <div id="gamePickerSection">
+      <h2>Choose a game</h2>
+      <ul class="game-list" id="gameList"></ul>
+    </div>
+
+    <h2>Leaderboard</h2>
+    <ul class="leaderboard-list" id="leaderboard"></ul>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/admin.js"></script>
+</body>
+</html>

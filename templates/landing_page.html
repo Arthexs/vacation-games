@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+
+{% block head_extra %}
+<style>
+    /* Adopted styles from final_page to ensure full-screen centering and no scrolling */
+    html, body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+    }
+
+    .container {
+        /* Ensure the container also takes up the available vertical space */
+        height: calc(100vh - 55px); 
+        max-width: 600px;
+        box-sizing: border-box;
+        /* Removed margin since landing-wrapper handles vertical placement */
+        margin: 15px auto 40px auto;
+        padding: 20px;
+        overflow: hidden;
+    }
+
+    /* === NEW: Wrapper for full-height vertical centering, similar to final-wrapper === */
+    .landing-wrapper {
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        justify-content: center; /* Center content vertically */
+        padding: 20px;
+    }
+    /* === END NEW WRAPPER === */
+
+    .selection-container {
+        /* This box holds the content, centered within the wrapper */
+        background: white;
+        border-radius: 20px;
+        padding: 30px; 
+        max-width: 500px;
+        width: 100%;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        color: #333;
+        margin: 0 auto; /* Center content horizontally */
+    }
+    .page-title { 
+        margin-top: 0;
+        margin-bottom: 20px;
+        font-size: 28px;
+        color: #667eea; 
+    }
+    .instructions { 
+        margin-bottom: 30px; 
+        font-size: 1.1em; 
+        line-height: 1.5;
+    }
+    /* QR code styling */
+    .qr-box {
+        margin-top: 20px;
+        display: inline-block; 
+    }
+    .qr-box img { 
+        border: 8px solid #f7f7f7; 
+        border-radius: 10px; 
+        max-width: 100%; 
+        height: auto;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="landing-wrapper">
+    <div class="selection-container">
+        <h1 class="page-title">🗺️ Start Speurtocht</h1>
+        <p class="instructions">
+            Scan de QR-code hieronder met het apparaat dat de speurtocht gaat doen om te beginnen!
+        </p>
+        
+        <div class="qr-box">
+            <img src="data:image/png;base64,{{ qr_image }}" alt="QR Code to Hunt">
+        </div>
+    </div>
+</div>
+{% endblock %}
