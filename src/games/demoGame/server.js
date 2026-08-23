@@ -1,7 +1,7 @@
 // Template for every future game module: meta + start(io, state) + stop(io, state)
 // + handleAction(io, state, playerId, payload) for its own player:action events.
 const meta = require('./meta');
-const { broadcastLeaderboard } = require('../../broadcast');
+const { broadcastLeaderboard, broadcastGameUpdate } = require('../../broadcast');
 
 const QUESTION = {
   text: 'What is the capital of France?',
@@ -16,7 +16,7 @@ function start(io, state) {
     winnerId: null,
   };
 
-  io.to('players').emit('game:update', {
+  broadcastGameUpdate(io, state, {
     question: QUESTION.text,
     options: QUESTION.options,
   });
@@ -38,7 +38,7 @@ function handleAction(io, state, playerId, payload) {
   if (payload.optionIndex === QUESTION.correctIndex) {
     round.winnerId = playerId;
     player.score += 1;
-    io.to('players').emit('game:update', {
+    broadcastGameUpdate(io, state, {
       question: QUESTION.text,
       options: QUESTION.options,
       resolved: true,

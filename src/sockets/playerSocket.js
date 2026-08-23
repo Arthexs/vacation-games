@@ -11,6 +11,11 @@ module.exports = function registerPlayerSocket(io, socket, state, gamesById) {
     // Client stores this id in localStorage so a later refresh can player:rejoin instead.
     socket.emit('player:joined', { playerId: id });
     socket.emit('state:snapshot', getSnapshot(state));
+    // Catches this socket up on the in-progress round instead of leaving it stuck
+    // on "waiting for question" until the next game:update happens to fire.
+    if (state.activeGame && state.activeGame.lastUpdatePayload) {
+      socket.emit('game:update', state.activeGame.lastUpdatePayload);
+    }
     broadcastLeaderboard(io, state);
   });
 
@@ -27,6 +32,9 @@ module.exports = function registerPlayerSocket(io, socket, state, gamesById) {
     socket.join('players');
 
     socket.emit('state:snapshot', getSnapshot(state));
+    if (state.activeGame && state.activeGame.lastUpdatePayload) {
+      socket.emit('game:update', state.activeGame.lastUpdatePayload);
+    }
     broadcastLeaderboard(io, state);
   });
 
