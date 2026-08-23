@@ -33,6 +33,7 @@ function getSnapshot(state) {
     players: getLeaderboard(state),
     activeGame: getActiveGamePayload(state),
     gameRegistry: state.gameRegistry,
+    partyStarted: state.partyStarted,
   };
 }
 
@@ -47,4 +48,16 @@ function broadcastActiveGame(io, state) {
   io.to('players').to('admin').emit('state:activeGame', getActiveGamePayload(state));
 }
 
-module.exports = { getLeaderboard, getSnapshot, broadcastLeaderboard, broadcastActiveGame };
+// players don't need this — their own view doesn't change when the party "starts",
+// only tv's lobby-vs-leaderboard view and admin's start-party button do.
+function broadcastPartyStarted(io, state) {
+  io.to('admin').to('tv').emit('state:partyStarted', state.partyStarted);
+}
+
+module.exports = {
+  getLeaderboard,
+  getSnapshot,
+  broadcastLeaderboard,
+  broadcastActiveGame,
+  broadcastPartyStarted,
+};

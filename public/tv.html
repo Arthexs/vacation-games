@@ -7,7 +7,23 @@
 <link rel="stylesheet" href="/css/styles.css">
 </head>
 <body class="tv-body">
-  <div class="card tv-card">
+  <div class="card lobby-card" id="lobbySection">
+    <div class="lobby-columns">
+      <div class="lobby-left">
+        <h1>Get Ready!</h1>
+        <p class="subtitle" id="playerCountText">0 players connected</p>
+        <ul class="player-grid" id="lobbyPlayerList"></ul>
+      </div>
+      <div class="lobby-right">
+        <div class="qr-frame">
+          <img class="qr-image" id="qrImage" alt="QR code to join">
+        </div>
+        <p class="join-url" id="joinUrlText"></p>
+      </div>
+    </div>
+  </div>
+
+  <div class="card tv-card" id="leaderboardSection" hidden>
     <h1>Leaderboard</h1>
     <ul class="leaderboard-list" id="leaderboard"></ul>
   </div>

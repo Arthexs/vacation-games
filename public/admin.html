@@ -11,12 +11,17 @@
     <h1>Admin</h1>
     <p class="subtitle">Control room — pick a game, start it, end it.</p>
 
+    <div id="startPartySection">
+      <p class="subtitle">Waiting for everyone to join on /play...</p>
+      <button id="startPartyBtn">Start Party</button>
+    </div>
+
     <div id="activeGameSection" hidden>
       <p class="status-banner active" id="activeGameBanner"></p>
       <button id="endGameBtn">End Game</button>
     </div>
 
-    <div id="gamePickerSection">
+    <div id="gamePickerSection" hidden>
       <h2>Choose a game</h2>
       <ul class="game-list" id="gameList"></ul>
     </div>

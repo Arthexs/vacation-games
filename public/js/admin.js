@@ -2,12 +2,16 @@ const socket = io();
 
 const gameListEl = document.getElementById('gameList');
 const leaderboardEl = document.getElementById('leaderboard');
+const startPartySection = document.getElementById('startPartySection');
+const startPartyBtn = document.getElementById('startPartyBtn');
 const gamePickerSection = document.getElementById('gamePickerSection');
 const activeGameSection = document.getElementById('activeGameSection');
 const activeGameBanner = document.getElementById('activeGameBanner');
 const endGameBtn = document.getElementById('endGameBtn');
 
 let gameRegistry = [];
+let partyStarted = false;
+let activeGame = null;
 
 function escapeHtml(str) {
   const div = document.createElement('div');
@@ -38,7 +42,17 @@ function renderGameList() {
   });
 }
 
-function renderActiveGame(activeGame) {
+// Three mutually exclusive sections: start-party (before the party begins),
+// game picker (party started, no game running), active-game banner (a game is running).
+function renderSections() {
+  startPartySection.hidden = partyStarted;
+
+  if (!partyStarted) {
+    activeGameSection.hidden = true;
+    gamePickerSection.hidden = true;
+    return;
+  }
+
   if (activeGame) {
     const game = gameRegistry.find((g) => g.id === activeGame.gameId);
     activeGameBanner.textContent = `Now playing: ${game ? game.title : activeGame.gameId}`;
@@ -50,16 +64,28 @@ function renderActiveGame(activeGame) {
   }
 }
 
+startPartyBtn.addEventListener('click', () => socket.emit('admin:startParty'));
 endGameBtn.addEventListener('click', () => socket.emit('admin:endGame'));
 
 socket.on('connect', () => socket.emit('admin:join'));
 
 socket.on('state:snapshot', (snapshot) => {
   gameRegistry = snapshot.gameRegistry;
+  partyStarted = snapshot.partyStarted;
+  activeGame = snapshot.activeGame;
   renderGameList();
   renderLeaderboard(snapshot.players);
-  renderActiveGame(snapshot.activeGame);
+  renderSections();
 });
 
 socket.on('state:leaderboard', renderLeaderboard);
-socket.on('state:activeGame', renderActiveGame);
+
+socket.on('state:activeGame', (newActiveGame) => {
+  activeGame = newActiveGame;
+  renderSections();
+});
+
+socket.on('state:partyStarted', (newPartyStarted) => {
+  partyStarted = newPartyStarted;
+  renderSections();
+});

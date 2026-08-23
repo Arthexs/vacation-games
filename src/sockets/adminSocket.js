@@ -1,4 +1,9 @@
-const { broadcastLeaderboard, broadcastActiveGame, getSnapshot } = require('../broadcast');
+const {
+  broadcastLeaderboard,
+  broadcastActiveGame,
+  broadcastPartyStarted,
+  getSnapshot,
+} = require('../broadcast');
 
 // Registered once per connected socket (see server.js). Access control is just
 // the /admin URL being unshared — there's no auth check on these events.
@@ -6,6 +11,12 @@ module.exports = function registerAdminSocket(io, socket, state, gamesById) {
   socket.on('admin:join', () => {
     socket.join('admin');
     socket.emit('state:snapshot', getSnapshot(state));
+  });
+
+  socket.on('admin:startParty', () => {
+    if (state.partyStarted) return;
+    state.partyStarted = true;
+    broadcastPartyStarted(io, state);
   });
 
   socket.on('admin:selectGame', ({ gameId } = {}) => {

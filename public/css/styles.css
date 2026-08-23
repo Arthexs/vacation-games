@@ -132,6 +132,96 @@ button.secondary:hover {
   font-weight: bold;
 }
 
+.tv-body {
+  align-items: center;
+  padding: 30px;
+}
+
+.lobby-card {
+  width: min(calc(100vw - 60px), 1800px);
+  max-width: none;
+  height: calc(100vh - 60px);
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.lobby-columns {
+  display: flex;
+  flex: 1;
+  gap: 40px;
+  min-height: 0;
+}
+
+.lobby-left {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.lobby-left h1,
+.lobby-left .subtitle {
+  text-align: left;
+}
+
+.lobby-right {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+/* Grows to fill whatever height is left in the column after the join-url
+   text below it, giving the image below a definite box to size against. */
+.qr-frame {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.qr-image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.join-url {
+  color: #666;
+  font-size: 1.4em;
+}
+
+.player-grid {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  align-content: flex-start;
+  gap: 14px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.player-grid li {
+  background: #f7f7f7;
+  border-radius: 10px;
+  padding: 16px 10px;
+  text-align: center;
+  font-weight: bold;
+}
+
+.player-grid li.disconnected {
+  opacity: 0.5;
+}
+
 .game-list {
   list-style: none;
 }
@@ -188,6 +278,23 @@ button.secondary:hover {
 .tv-card .leaderboard-list li {
   font-size: 1.4em;
   padding: 18px 20px;
+}
+
+.tv-card .subtitle {
+  font-size: 1.2em;
+}
+
+.lobby-card h1 {
+  font-size: clamp(2.4em, 7vh, 5em);
+}
+
+.lobby-card .subtitle {
+  font-size: clamp(1.3em, 3.5vh, 2.2em);
+}
+
+.lobby-card .player-grid li {
+  font-size: clamp(1.3em, 3vh, 2.2em);
+  padding: clamp(16px, 2.4vh, 32px) 10px;
 }
 
 @media (max-width: 600px) {
