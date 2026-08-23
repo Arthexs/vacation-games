@@ -4,7 +4,7 @@ Claude Code reads this file automatically at the start of every session in this 
 
 ## What this is
 
-A LAN-only party game host: an admin (gamemaster) phone selects a mini-game and runs it live for a room of players, with a TV (HDMI) showing the live leaderboard throughout. Successor to an old single-player Flask treasure hunt in this same folder (`app.py`, `config.py`, `utils.py`, `templates/`, `static/`) — that code is being replaced, not extended. Its templates/CSS are useful as visual reference only.
+A LAN-only party game host: an admin (gamemaster) phone selects a mini-game and runs it live for a room of players, with a TV (HDMI) showing a join lobby before the party starts, then the live leaderboard throughout. Successor to an old single-player Flask treasure hunt that used to live in this same folder — that code has been removed. `static/mountain_images/` was kept for the future `mountainQuiz` game; everything else from the old app is gone.
 
 ## Tech stack (decided, don't second-guess this)
 
@@ -15,15 +15,17 @@ A LAN-only party game host: an admin (gamemaster) phone selects a mini-game and 
 
 ## Roles
 
-- `/admin` — gamemaster control room: pick a game, start it, end it, watch the leaderboard. Unshared URL, no PIN.
+- `/admin` — gamemaster control room: start the party, pick a game, start it, end it, watch the leaderboard, override a player's score if needed. Unshared URL, no PIN.
 - `/play` — each player's phone: name entry once, then either the leaderboard (between games) or the active game's screen.
-- `/tv` — always shows the live leaderboard, full stop. Never renders any game's board.
+- `/tv` — before the admin starts the party, shows a join lobby (player list + QR code). Once started, always shows the live leaderboard for the rest of the party. Never renders any game's board.
 
 ## Build order
 
-1. Core shell: `server.js`, `src/state.js`, the three routes/socket handlers, and the core interaction contract (see ARCHITECTURE.md § "Core interaction contract").
-2. `src/games/demoGame/` + `public/games/demoGame/` — one simple working game that proves admin → play → tv works live end to end. Template for everything after it.
-3. Real games, one at a time, each a new folder pair under `src/games/<name>/` and `public/games/<name>/`, following `demoGame`'s exact shape and registered in `src/games/index.js`. Don't touch core shell files to add a game — if a new game genuinely needs something the current contract doesn't support, stop and say so before changing shared code.
+1. Core shell: `server.js`, `src/state.js`, the three routes/socket handlers, and the core interaction contract (see ARCHITECTURE.md § "Core interaction contract"). **Done.**
+2. `src/games/demoGame/` + `public/games/demoGame/` — one simple working game that proves admin → play → tv works live end to end. Template for everything after it. **Done.**
+3. Real games, one at a time, each a new folder pair under `src/games/<name>/` and `public/games/<name>/`, following `demoGame`'s exact shape and registered in `src/games/index.js`. Don't touch core shell files to add a game — if a new game genuinely needs something the current contract doesn't support, stop and say so before changing shared code. **Current focus** — `higherLower`, `mountainQuiz`, `scrollChallenge`, `rotationChallenge` still open.
+
+Also already built beyond that original three-step plan: competition-ranking tie handling, the `/tv` pre-game lobby (`admin:startParty`), and an admin score override (`admin:setScore`) — see ARCHITECTURE.md for the details of each.
 
 ## Content data convention
 
