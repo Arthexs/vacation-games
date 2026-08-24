@@ -2,15 +2,22 @@
 // discussion. Self-contained (not sharing code with spyfall/server.js) per
 // discussion — the two games' round shapes overlap but diverge enough
 // (turn order vs. free discussion, no "guess the word" instant win) that
-// duplicating was the simpler call.
+// duplicating was the simpler call. /tv shows the growing clue log (already
+// public — nothing secret, same reasoning as Spyfall's location deck).
 const meta = require('./meta');
 const wordPairs = require('./wordPairs');
-const { broadcastLeaderboard, broadcastGameUpdate, sendPlayerUpdate } = require('../../broadcast');
+const {
+  broadcastLeaderboard,
+  broadcastGameUpdate,
+  sendPlayerUpdate,
+  broadcastTvContent,
+  clearTvContent,
+} = require('../../broadcast');
 
 const MIN_PLAYERS = 3; // below this, turn-based clue-giving isn't meaningful
 const LAPS = 2; // full trips around the turn order before voting opens — not specced
 const CATCH_POINTS = 1; // each non-imposter player, if the group votes out the Imposter
-const IMPOSTER_WIN_POINTS = 2; // the Imposter, if the vote is split or wrong
+const IMPOSTER_WIN_POINTS = 5; // the Imposter, if the vote is split or wrong
 
 function connectedPlayerIds(state) {
   return Object.values(state.players).filter((p) => p.connected).map((p) => p.id);
@@ -42,19 +49,26 @@ function start(io, state) {
 }
 
 function stop(io, state) {
+  clearTvContent(io, state);
   state.activeGame.roundState = null;
 }
 
-// No secrets in a clue-log update — safe to broadcast room-wide. Each
-// player's own role/word was already delivered privately at assignRole time
-// (see handleAdminAction) and is expected to be cached client-side.
+// No secrets in a clue-log update — safe to broadcast room-wide (and to
+// /tv). Each player's own role/word was already delivered privately at
+// assignRole time (see handleAdminAction) and is expected to be cached
+// client-side.
 function broadcastCluePhase(io, state) {
   const round = state.activeGame.roundState;
-  broadcastGameUpdate(io, state, {
+  const currentTurnId = round.turnOrder[round.currentTurnIndex];
+  const currentTurnPlayer = state.players[currentTurnId];
+  const payload = {
     phase: 'clues',
     clueLog: round.clueLog,
-    currentTurnId: round.turnOrder[round.currentTurnIndex],
-  });
+    currentTurnId,
+    currentTurnName: currentTurnPlayer ? currentTurnPlayer.name : null,
+  };
+  broadcastGameUpdate(io, state, payload);
+  broadcastTvContent(io, state, payload);
 }
 
 function handleAdminAction(io, state, payload) {
@@ -80,6 +94,14 @@ function handleAdminAction(io, state, payload) {
       sendPlayerUpdate(io, state, id, { phase: 'clues', role: 'player', word: round.pair.real, clueLog: [], currentTurnId });
     }
   });
+  // Room-wide (no word/role — those went out above), so the admin panel
+  // actually learns the round moved past 'pending' and swaps its stale
+  // Imposter picker for the "clue round in progress" message, and so /tv
+  // can show the clue log. Without this, admin.js never receives another
+  // game:update until the first clue is submitted (if ever), and is left
+  // showing picker buttons that no longer do anything — round.phase is
+  // already 'clues' by the time they're clicked again. Same bug Spyfall had.
+  broadcastCluePhase(io, state);
 }
 
 function resolveVote(io, state) {
@@ -123,6 +145,14 @@ function resolveVote(io, state) {
     votes: round.votes,
     outcome: caught ? 'caught' : 'escaped',
   });
+  broadcastTvContent(io, state, {
+    phase: 'reveal',
+    clueLog: round.clueLog,
+    word: round.pair.real,
+    decoyWord: round.pair.decoy,
+    imposterName: imposter ? imposter.name : null,
+    outcome: caught ? 'caught' : 'escaped',
+  });
   broadcastLeaderboard(io, state);
 }
 
@@ -155,7 +185,9 @@ function handleAction(io, state, playerId, payload) {
     if (round.lapsCompleted >= LAPS) {
       round.phase = 'voting';
       round.votes = {};
-      broadcastGameUpdate(io, state, { phase: 'voting', clueLog: round.clueLog });
+      const votingPayload = { phase: 'voting', clueLog: round.clueLog };
+      broadcastGameUpdate(io, state, votingPayload);
+      broadcastTvContent(io, state, votingPayload);
       return;
     }
 

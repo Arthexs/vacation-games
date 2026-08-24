@@ -1,6 +1,4 @@
 (function () {
-  const selfId = localStorage.getItem('vg_playerId');
-
   // Per-player secret (role/word), like Spyfall, doesn't repeat on every
   // later broadcast — cached across update() calls.
   let myRole = null;
@@ -22,11 +20,13 @@
       .join('')}</ul>`;
   }
 
-  function renderClues(container, socket, payload) {
+  function renderClues(container, socket, payload, helpers) {
     const bodyEl = container.querySelector('#im-body');
-    const isMyTurn = payload.currentTurnId === selfId;
+    const isMyTurn = payload.currentTurnId === helpers.getSelfId();
 
-    let controlsHtml = '<p class="status-banner waiting">Waiting for your turn...</p>';
+    let controlsHtml = payload.currentTurnName
+      ? `<p class="status-banner waiting">Waiting for ${payload.currentTurnName}'s turn...</p>`
+      : '<p class="status-banner waiting">Waiting for your turn...</p>';
     if (isMyTurn) {
       controlsHtml = `
         <input type="text" id="im-clue-input" placeholder="One-word clue..." maxlength="40">
@@ -52,6 +52,7 @@
 
   function renderVoting(container, socket, payload, helpers) {
     const bodyEl = container.querySelector('#im-body');
+    const selfId = helpers.getSelfId();
     const others = helpers.getPlayers().filter((p) => p.connected && p.id !== selfId);
 
     const ul = document.createElement('ul');
@@ -116,7 +117,7 @@
       } else {
         roleBanner.hidden = true;
       }
-      renderClues(container, socket, payload);
+      renderClues(container, socket, payload, helpers);
       if (payload.notYourTurn) {
         const note = document.createElement('p');
         note.className = 'status-banner waiting';
