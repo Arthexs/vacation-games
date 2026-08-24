@@ -33,9 +33,22 @@ let lastGameUpdatePayload = null;
 const adminHelpers = {
   getPlayers: () => players,
   renderPlayerPicker(container, onPick) {
+    const connected = players.filter((p) => p.connected);
+
+    const randomBtn = document.createElement('button');
+    randomBtn.type = 'button';
+    randomBtn.className = 'secondary';
+    randomBtn.textContent = 'Select at Random';
+    randomBtn.disabled = connected.length === 0;
+    randomBtn.addEventListener('click', () => {
+      const pick = connected[Math.floor(Math.random() * connected.length)];
+      onPick(pick.id);
+    });
+    container.appendChild(randomBtn);
+
     const ul = document.createElement('ul');
     ul.className = 'player-picker';
-    players.filter((p) => p.connected).forEach((p) => {
+    connected.forEach((p) => {
       const li = document.createElement('li');
       const btn = document.createElement('button');
       btn.type = 'button';
