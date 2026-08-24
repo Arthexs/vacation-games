@@ -53,9 +53,13 @@ function broadcastActiveGame(io, state) {
 // player who joins/rejoins mid-round be caught up immediately, rather than
 // waiting on the next update. Per-player-only updates (e.g. a wrong-guess
 // message to a single socket) should keep emitting directly and skip this.
+// Also reaches `admin` — the admin socket only ever joins the `admin` room,
+// so without this a game's own admin.js (the player picker, "Start Timer",
+// etc.) never receives anything to render, same as broadcastLeaderboard and
+// broadcastActiveGame already reaching admin below.
 function broadcastGameUpdate(io, state, payload) {
   state.activeGame.lastUpdatePayload = payload;
-  io.to('players').emit('game:update', payload);
+  io.to('players').to('admin').emit('game:update', payload);
 }
 
 // players don't need this — their own view doesn't change when the party "starts",
