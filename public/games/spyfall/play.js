@@ -1,13 +1,17 @@
 (function () {
-  const selfId = localStorage.getItem('vg_playerId');
-
   // Per-player secrets (role/location) arrive via sendPlayerUpdate and don't
   // repeat on every later broadcast (e.g. the room-wide "timer started"
   // update) — remembered across update() calls so the UI doesn't lose them.
   let myRole = null;
   let myLocation = null;
   let myLocations = null;
+  let spyGuessUsed = false;
   let timerInterval = null;
+  // The id of the last vote call this player already answered (Vote or
+  // Pass), so a re-render of the same still-open call shows a "waiting on
+  // everyone else" message instead of the prompt again — but a genuinely new
+  // call (different id, e.g. from a later round) still gets the fresh prompt.
+  let respondedVoteCallId = null;
 
   function render(container) {
     container.innerHTML = `
@@ -16,7 +20,57 @@
       <p class="subtitle" id="sf-phase-text"></p>
       <p class="timer-inline" id="sf-timer" hidden></p>
       <div id="sf-body"></div>
+      <div id="sf-vote-call-area"></div>
+      <div class="modal-overlay" id="sf-vote-call-modal" hidden>
+        <div class="modal-card">
+          <p class="subtitle" id="sf-vote-call-text"></p>
+          <div class="modal-actions" id="sf-vote-call-actions">
+            <button type="button" id="sf-vote-call-vote-btn">Vote</button>
+            <button type="button" id="sf-vote-call-pass-btn" class="secondary">Pass</button>
+          </div>
+        </div>
+      </div>
     `;
+  }
+
+  function renderVoteCallButton(container, socket, disabled) {
+    const area = container.querySelector('#sf-vote-call-area');
+    area.innerHTML = '';
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.textContent = 'Call for a Vote';
+    btn.disabled = disabled;
+    btn.addEventListener('click', () => {
+      socket.emit('player:action', { initiateVote: true });
+    });
+    area.appendChild(btn);
+  }
+
+  function hideVoteCallPopup(container) {
+    container.querySelector('#sf-vote-call-modal').hidden = true;
+  }
+
+  function showVoteCallPopup(container, socket, voteCall) {
+    const modal = container.querySelector('#sf-vote-call-modal');
+    const textEl = container.querySelector('#sf-vote-call-text');
+    const actionsEl = container.querySelector('#sf-vote-call-actions');
+    modal.hidden = false;
+
+    if (respondedVoteCallId === voteCall.id) {
+      textEl.textContent = `${voteCall.initiatorName} called for a vote — waiting for everyone else...`;
+      actionsEl.hidden = true;
+      return;
+    }
+
+    textEl.textContent = `${voteCall.initiatorName} wants to call a vote. Vote now?`;
+    actionsEl.hidden = false;
+    const respond = (response) => {
+      respondedVoteCallId = voteCall.id;
+      socket.emit('player:action', { voteCallResponse: response });
+      showVoteCallPopup(container, socket, voteCall);
+    };
+    container.querySelector('#sf-vote-call-vote-btn').onclick = () => respond('vote');
+    container.querySelector('#sf-vote-call-pass-btn').onclick = () => respond('pass');
   }
 
   function stopTimerDisplay(container) {
@@ -51,14 +105,21 @@
     if (myRole === 'spy') {
       roleBanner.hidden = false;
       roleBanner.className = 'status-banner waiting';
-      roleBanner.textContent = "You are the SPY! Blend in, and guess the location whenever you're ready.";
+
+      if (spyGuessUsed) {
+        roleBanner.textContent = 'You are the SPY! Blend in and hope you\'re not caught.';
+        bodyEl.innerHTML = '<p class="subtitle">You\'ve used your one guess and it was wrong — no more guessing this round.</p>';
+        return;
+      }
+
+      roleBanner.textContent = "You are the SPY! Blend in, and guess the location whenever you're ready — you only get one try.";
 
       const options = (myLocations || [])
         .map((loc) => `<option value="${loc.id}">${loc.name}</option>`)
         .join('');
       bodyEl.innerHTML = `
         <select id="sf-guess-select">${options}</select>
-        <button type="button" id="sf-guess-btn">Guess the Location</button>
+        <button type="button" id="sf-guess-btn">Guess the Location (one try)</button>
       `;
       bodyEl.querySelector('#sf-guess-btn').addEventListener('click', () => {
         const select = bodyEl.querySelector('#sf-guess-select');
@@ -79,6 +140,7 @@
 
   function renderVoting(container, socket, helpers) {
     const bodyEl = container.querySelector('#sf-body');
+    const selfId = helpers.getSelfId();
     const others = helpers.getPlayers().filter((p) => p.connected && p.id !== selfId);
 
     const ul = document.createElement('ul');
@@ -120,15 +182,23 @@
     if (payload.role) myRole = payload.role;
     if (payload.location) myLocation = payload.location;
     if (payload.locations) myLocations = payload.locations;
+    if (payload.wrongGuess) spyGuessUsed = true;
 
     const phaseText = container.querySelector('#sf-phase-text');
     const bodyEl = container.querySelector('#sf-body');
+
+    if (payload.phase !== 'discussion') {
+      hideVoteCallPopup(container);
+      container.querySelector('#sf-vote-call-area').innerHTML = '';
+    }
 
     if (payload.phase === 'pending') {
       stopTimerDisplay(container);
       container.querySelector('#sf-role-banner').hidden = true;
       phaseText.textContent = 'Waiting for the gamemaster to choose a Spy...';
       bodyEl.innerHTML = '';
+      respondedVoteCallId = null;
+      spyGuessUsed = false;
       return;
     }
 
@@ -139,8 +209,21 @@
       if (payload.wrongGuess) {
         const note = document.createElement('p');
         note.className = 'status-banner waiting';
-        note.textContent = 'Not the right location — keep trying!';
+        note.textContent = 'Not the right location — that was your one guess.';
         bodyEl.prepend(note);
+      }
+
+      renderVoteCallButton(container, socket, !!payload.voteCall);
+      if (payload.voteCall) {
+        showVoteCallPopup(container, socket, payload.voteCall);
+      } else {
+        hideVoteCallPopup(container);
+        if (payload.voteCallFailed) {
+          const note = document.createElement('p');
+          note.className = 'status-banner waiting';
+          note.textContent = 'Not enough support to start a vote — discussion continues.';
+          bodyEl.prepend(note);
+        }
       }
       return;
     }
@@ -160,6 +243,8 @@
       myRole = null;
       myLocation = null;
       myLocations = null;
+      spyGuessUsed = false;
+      respondedVoteCallId = null;
     }
   }
 

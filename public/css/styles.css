@@ -449,6 +449,76 @@ button.secondary:hover {
   padding: 10px 18px;
 }
 
+/* Sits right under a picker's label instead of inheriting the default
+   button's full width + 10px margin-top, which pushed it down and made it
+   look detached from the list it belongs to. */
+.random-pick-btn {
+  display: block;
+  width: 100%; /* Spans the full container width */
+  padding: 8px 16px;
+  font-size: 14px;
+  margin-bottom: 12px;
+  box-sizing: border-box;
+}
+
+/* grid-template-columns is set inline per-render (see public/games/spyfall/tv.js)
+   so the column count can be computed as roundup(sqrt(location count)). */
+.sf-location-grid {
+  list-style: none;
+  display: grid;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.sf-location-grid li {
+  background: #f7f7f7;
+  border: 1px solid #e8e8e8;
+  border-radius: 12px;
+  padding: 16px 8px;
+  text-align: center;
+  font-weight: bold;
+  color: #333;
+  font-size: clamp(0.8em, 1.6vw, 1.15em);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+}
+
+.sf-location-grid li.sf-location-actual {
+  background: #ffd166;
+  border-color: #ffd166;
+  box-shadow: 0 4px 14px rgba(255, 209, 102, 0.55);
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 20;
+  padding: 20px;
+}
+
+.modal-card {
+  background: white;
+  border-radius: 16px;
+  padding: 24px;
+  max-width: 400px;
+  width: 100%;
+  text-align: center;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.modal-actions button {
+  flex: 1;
+  margin-top: 0;
+}
+
 .hl-cards {
   display: flex;
   gap: 15px;
