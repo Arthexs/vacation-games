@@ -6,8 +6,9 @@ const spyfall = require('./spyfall/server');
 const imposter = require('./imposter/server');
 const headsUp = require('./headsUp/server');
 const witsAndWagers = require('./witsAndWagers/server');
+const wavelength = require('./wavelength/server');
 
-const games = [demoGame, higherLower, spyfall, imposter, headsUp, witsAndWagers];
+const games = [demoGame, higherLower, spyfall, imposter, headsUp, witsAndWagers, wavelength];
 const gamesById = Object.fromEntries(games.map((game) => [game.meta.id, game]));
 
 module.exports = { games, gamesById };
