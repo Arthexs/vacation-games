@@ -556,6 +556,24 @@ button.secondary:hover {
   margin-bottom: 14px;
 }
 
+/* Full-screen "3...2...1" beat before an admin-triggered timer starts.
+   font-size scales off viewport height, same idea as .lobby-card's
+   headings — reads as a small phone-sized number on /play and a huge
+   room-readable one on /tv, from one shared rule. Above the timer banner
+   (z-index 10) and any modal (20) so it's never hidden behind either. */
+.countdown-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: clamp(4em, 22vh, 14em);
+  font-weight: bold;
+  color: white;
+  z-index: 30;
+}
+
 .hl-cards {
   display: flex;
   gap: 15px;

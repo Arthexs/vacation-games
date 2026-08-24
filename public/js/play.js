@@ -11,6 +11,7 @@ const rulesModal = document.getElementById('rulesModal');
 const rulesModalTitle = document.getElementById('rulesModalTitle');
 const rulesModalList = document.getElementById('rulesModalList');
 const rulesModalCloseBtn = document.getElementById('rulesModalCloseBtn');
+const countdownOverlay = document.getElementById('countdownOverlay');
 
 // Each public/games/<id>/play.js registers itself here on load, e.g.:
 //   window.__vgGames['demoGame'] = { render(container, socket, helpers), update(container, socket, payload, helpers) }
@@ -178,6 +179,15 @@ socket.on('game:update', (payload) => {
   if (!currentGameId) return;
   const handlers = window.__vgGames[currentGameId];
   if (handlers && handlers.update) handlers.update(gameSection, socket, payload, gameHelpers);
+});
+
+socket.on('countdown:tick', (secondsLeft) => {
+  if (!secondsLeft) {
+    countdownOverlay.hidden = true;
+    return;
+  }
+  countdownOverlay.hidden = false;
+  countdownOverlay.textContent = secondsLeft;
 });
 
 if (!playerId) showJoin();

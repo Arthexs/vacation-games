@@ -11,6 +11,7 @@ const leaderboardEl = document.getElementById('leaderboard');
 const timerBanner = document.getElementById('timerBanner');
 const timerLabelEl = document.getElementById('timerLabel');
 const timerValueEl = document.getElementById('timerValue');
+const countdownOverlay = document.getElementById('countdownOverlay');
 
 let players = [];
 let partyStarted = false;
@@ -171,4 +172,13 @@ socket.on('tv:timer', (payload) => {
     return;
   }
   startTimerDisplay(payload);
+});
+
+socket.on('countdown:tick', (secondsLeft) => {
+  if (!secondsLeft) {
+    countdownOverlay.hidden = true;
+    return;
+  }
+  countdownOverlay.hidden = false;
+  countdownOverlay.textContent = secondsLeft;
 });

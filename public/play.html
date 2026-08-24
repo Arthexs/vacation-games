@@ -36,6 +36,10 @@
     </div>
   </div>
 
+  <!-- "3...2...1" beat before an admin-triggered timer starts — see
+       countdown:tick in src/broadcast.js/adminSocket.js. -->
+  <div class="countdown-overlay" id="countdownOverlay" hidden></div>
+
   <script src="/socket.io/socket.io.js"></script>
   <script src="/js/play.js"></script>
 </body>

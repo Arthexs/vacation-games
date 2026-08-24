@@ -12,6 +12,10 @@
     <span class="timer-value" id="timerValue"></span>
   </div>
 
+  <!-- "3...2...1" beat before an admin-triggered timer starts — see
+       countdown:tick in src/broadcast.js/adminSocket.js. -->
+  <div class="countdown-overlay" id="countdownOverlay" hidden></div>
+
   <div class="card lobby-card" id="lobbySection">
     <div class="lobby-columns">
       <div class="lobby-left">

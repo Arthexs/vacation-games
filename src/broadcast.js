@@ -125,6 +125,17 @@ function sendPlayerUpdate(io, state, playerId, payload) {
   io.to(player.socketId).emit('game:update', payload);
 }
 
+// A brief "get ready" beat (3, 2, 1) before an admin-triggered timer actually
+// starts — see src/sockets/adminSocket.js, which drives the ticking. Deliberately
+// separate from tv:timer (that's the timer's own MM:SS banner, which only takes
+// over once this finishes) and from every other channel here: purely transient,
+// nothing worth stashing on activeGame for reconnect — by the time a client
+// could ask what it missed, the round's own (already reconnect-safe) timer has
+// taken over. secondsLeft is a small int while counting down, null/0 to clear.
+function broadcastCountdown(io, state, secondsLeft) {
+  io.to('players').to('tv').emit('countdown:tick', secondsLeft);
+}
+
 module.exports = {
   getLeaderboard,
   getSnapshot,
@@ -137,4 +148,5 @@ module.exports = {
   broadcastTvTimer,
   clearTvTimer,
   sendPlayerUpdate,
+  broadcastCountdown,
 };

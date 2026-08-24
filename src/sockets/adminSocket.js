@@ -4,6 +4,7 @@ const {
   broadcastPartyStarted,
   broadcastTvContent,
   clearTvContent,
+  broadcastCountdown,
   getSnapshot,
 } = require('../broadcast');
 
@@ -11,6 +12,37 @@ const {
 // read, short enough not to stall a game that wants /tv sooner (Wits &
 // Wagers, Drawful), which just takes it back over once this expires.
 const RULES_DISPLAY_MS = 12000;
+
+// A "3...2...1" beat before an admin-triggered timer actually starts, so
+// players get a moment to look up/get ready instead of the clock just
+// silently already running. Handled once here rather than per-game, same
+// reasoning as the rules banner above — every game's "Start Timer" admin
+// action already funnels through this one handler. Deliberately does NOT
+// wrap src/timer.js's startTimer() itself: a few games (Drawful's title/vote
+// phases) auto-chain a new timer directly from a previous phase's
+// onComplete, with no admin click and no "get ready" moment to insert —
+// scoping this to admin:action instead excludes those for free.
+const PRE_TIMER_COUNTDOWN_SECONDS = 3;
+
+function runPreTimerCountdown(io, state, gameId, onComplete) {
+  let secondsLeft = PRE_TIMER_COUNTDOWN_SECONDS;
+  broadcastCountdown(io, state, secondsLeft);
+  const tick = () => {
+    if (!state.activeGame || state.activeGame.gameId !== gameId) {
+      broadcastCountdown(io, state, null); // game ended/changed mid-countdown — don't leave the overlay stuck
+      return;
+    }
+    secondsLeft -= 1;
+    if (secondsLeft > 0) {
+      broadcastCountdown(io, state, secondsLeft);
+      setTimeout(tick, 1000);
+      return;
+    }
+    broadcastCountdown(io, state, null);
+    onComplete();
+  };
+  setTimeout(tick, 1000);
+}
 
 // Registered once per connected socket (see server.js). Access control is just
 // the /admin URL being unshared — there's no auth check on these events.
@@ -95,7 +127,21 @@ module.exports = function registerAdminSocket(io, socket, state, gamesById) {
   // handleAdminAction if it needs an admin-in-the-loop step.
   socket.on('admin:action', (payload) => {
     if (!state.activeGame) return;
-    const game = gamesById[state.activeGame.gameId];
-    if (game.handleAdminAction) game.handleAdminAction(io, state, payload);
+    const gameId = state.activeGame.gameId;
+    const game = gamesById[gameId];
+    if (!game.handleAdminAction) return;
+
+    // Every game's "Start Timer" button funnels through here with the same
+    // { type: 'startTimer' } shape, so the pre-timer countdown (see above)
+    // is inserted once, generically, instead of per game.
+    if (payload.type === 'startTimer') {
+      runPreTimerCountdown(io, state, gameId, () => {
+        if (!state.activeGame || state.activeGame.gameId !== gameId) return; // game ended/changed mid-countdown
+        game.handleAdminAction(io, state, payload);
+      });
+      return;
+    }
+
+    game.handleAdminAction(io, state, payload);
   });
 };
