@@ -7,8 +7,12 @@ const joinUrlText = document.getElementById('joinUrlText');
 const playerCountText = document.getElementById('playerCountText');
 const lobbyPlayerList = document.getElementById('lobbyPlayerList');
 const leaderboardEl = document.getElementById('leaderboard');
+const timerBanner = document.getElementById('timerBanner');
+const timerLabelEl = document.getElementById('timerLabel');
+const timerValueEl = document.getElementById('timerValue');
 
 let players = [];
+let timerInterval = null;
 
 function escapeHtml(str) {
   const div = document.createElement('div');
@@ -49,6 +53,32 @@ function showLeaderboard() {
   leaderboardSection.hidden = false;
 }
 
+function stopTimerDisplay() {
+  if (timerInterval) clearInterval(timerInterval);
+  timerInterval = null;
+  timerBanner.hidden = true;
+}
+
+// Ticks locally from the server's {startedAt, durationMs} — the server's own
+// setTimeout (src/timer.js) is what actually ends the round, this is just display.
+function startTimerDisplay({ startedAt, durationMs, label }) {
+  timerLabelEl.textContent = label || '';
+  timerBanner.hidden = false;
+
+  function tick() {
+    const remainingMs = Math.max(0, startedAt + durationMs - Date.now());
+    const totalSeconds = Math.ceil(remainingMs / 1000);
+    const mins = Math.floor(totalSeconds / 60);
+    const secs = totalSeconds % 60;
+    timerValueEl.textContent = `${mins}:${String(secs).padStart(2, '0')}`;
+    if (remainingMs <= 0) stopTimerDisplay();
+  }
+
+  if (timerInterval) clearInterval(timerInterval);
+  tick();
+  timerInterval = setInterval(tick, 250);
+}
+
 socket.on('connect', () => socket.emit('tv:join'));
 
 socket.on('tv:lobbyInfo', ({ joinUrl, qrDataUrl }) => {
@@ -73,4 +103,12 @@ socket.on('state:leaderboard', (updatedPlayers) => {
 socket.on('state:partyStarted', (partyStarted) => {
   if (partyStarted) showLeaderboard();
   else showLobby();
+});
+
+socket.on('tv:timer', (payload) => {
+  if (!payload) {
+    stopTimerDisplay();
+    return;
+  }
+  startTimerDisplay(payload);
 });

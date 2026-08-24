@@ -64,6 +64,20 @@ function broadcastPartyStarted(io, state) {
   io.to('admin').to('tv').emit('state:partyStarted', state.partyStarted);
 }
 
+// A standalone countdown banner for /tv, deliberately separate from tv:content:
+// it can layer on top of the lobby, the leaderboard, or a tv:content takeover,
+// so a game that only needs a visible clock (no full-screen content) doesn't
+// need a tv.js just to show a number counting down. See src/timer.js.
+function broadcastTvTimer(io, state, payload) {
+  state.activeGame.tvTimer = payload;
+  io.to('tv').emit('tv:timer', payload);
+}
+
+function clearTvTimer(io, state) {
+  if (state.activeGame) state.activeGame.tvTimer = null;
+  io.to('tv').emit('tv:timer', null);
+}
+
 // For a single player's own view of the round (a secret role, private feedback)
 // rather than a whole-room update. Takes a playerId (not a socket) so it also
 // works from contexts that only have an id to go on, e.g. an admin action.
@@ -80,5 +94,7 @@ module.exports = {
   broadcastActiveGame,
   broadcastPartyStarted,
   broadcastGameUpdate,
+  broadcastTvTimer,
+  clearTvTimer,
   sendPlayerUpdate,
 };

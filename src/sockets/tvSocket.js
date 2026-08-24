@@ -7,5 +7,11 @@ module.exports = function registerTvSocket(io, socket, state, lobbyInfo) {
     socket.join('tv');
     socket.emit('state:snapshot', getSnapshot(state));
     socket.emit('tv:lobbyInfo', lobbyInfo);
+
+    // Catches this socket up on an in-progress timer instead of leaving it
+    // stuck with no countdown until the next tick happens to fire.
+    if (state.activeGame && state.activeGame.tvTimer) {
+      socket.emit('tv:timer', state.activeGame.tvTimer);
+    }
   });
 };

@@ -325,6 +325,28 @@ button.secondary:hover {
   padding: clamp(16px, 2.4vh, 32px) 10px;
 }
 
+.timer-banner {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #333;
+  color: white;
+  padding: 12px 28px;
+  border-radius: 999px;
+  font-size: 1.4em;
+  font-weight: bold;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  z-index: 10;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+.timer-banner .timer-value {
+  color: #ffd166;
+}
+
 @media (max-width: 600px) {
   .card {
     padding: 20px;
