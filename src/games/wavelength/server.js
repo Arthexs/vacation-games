@@ -35,6 +35,7 @@ function start(io, state) {
     clue: null,
     guesses: {}, // playerId -> 1-10
     timerHandle: null,
+    revealTimeoutId: null,
   };
   broadcastGameUpdate(io, state, { phase: 'pending' });
 }
@@ -42,6 +43,9 @@ function start(io, state) {
 function stop(io, state) {
   const round = state.activeGame.roundState;
   if (round && round.timerHandle) round.timerHandle.clear();
+  // Otherwise, ending the game mid-reveal-pause leaves this scheduled — it
+  // would fire later and crash trying to read the now-null roundState.
+  if (round && round.revealTimeoutId) clearTimeout(round.revealTimeoutId);
   clearTvContent(io, state);
   state.activeGame.roundState = null;
 }
@@ -131,7 +135,7 @@ function resolveRound(io, state) {
   broadcastTvContent(io, state, revealPayload);
   broadcastLeaderboard(io, state);
 
-  setTimeout(() => {
+  round.revealTimeoutId = setTimeout(() => {
     clearTvContent(io, state);
     startNextRound(io, state);
   }, REVEAL_PAUSE_MS);
@@ -147,6 +151,7 @@ function startNextRound(io, state) {
     clue: null,
     guesses: {},
     timerHandle: null,
+    revealTimeoutId: null,
   };
   broadcastGameUpdate(io, state, { phase: 'pending' });
 }

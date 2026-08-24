@@ -71,6 +71,7 @@ function startNextQuestion(io, state) {
   round.slots = [];
   round.phase = 'guessing';
   round.timerHandle = null;
+  round.revealTimeoutId = null;
   broadcastGuessPhase(io, state);
 }
 
@@ -85,6 +86,7 @@ function start(io, state) {
     bets: {}, // bettorPlayerId -> { betOnPlayerId, amount }
     slots: [],
     timerHandle: null,
+    revealTimeoutId: null,
   };
   broadcastGuessPhase(io, state);
 }
@@ -92,6 +94,9 @@ function start(io, state) {
 function stop(io, state) {
   const round = state.activeGame.roundState;
   if (round && round.timerHandle) round.timerHandle.clear();
+  // Otherwise, ending the game mid-reveal-pause leaves this scheduled — it
+  // would fire later and crash trying to read the now-null roundState.
+  if (round && round.revealTimeoutId) clearTimeout(round.revealTimeoutId);
   clearTvContent(io, state);
   state.activeGame.roundState = null;
 }
@@ -107,7 +112,7 @@ function openBetPhase(io, state) {
     round.phase = 'reveal';
     broadcastGameUpdate(io, state, { phase: 'reveal', question: round.question.question, answer: round.question.answer, noGuesses: true });
     broadcastTvContent(io, state, { phase: 'reveal', question: round.question.question, answer: round.question.answer, noGuesses: true });
-    setTimeout(() => startNextQuestion(io, state), REVEAL_PAUSE_MS);
+    round.revealTimeoutId = setTimeout(() => startNextQuestion(io, state), REVEAL_PAUSE_MS);
     return;
   }
 
@@ -144,7 +149,7 @@ function resolveBets(io, state) {
   broadcastTvContent(io, state, payload);
   broadcastLeaderboard(io, state);
 
-  setTimeout(() => startNextQuestion(io, state), REVEAL_PAUSE_MS);
+  round.revealTimeoutId = setTimeout(() => startNextQuestion(io, state), REVEAL_PAUSE_MS);
 }
 
 function handleAdminAction(io, state, payload) {
