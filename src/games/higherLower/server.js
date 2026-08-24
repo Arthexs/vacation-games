@@ -91,10 +91,14 @@ function resolveRound(io, state) {
   }, REVEAL_PAUSE_MS);
 }
 
-// Lets admin:endGame finish the round already in progress — with whatever
-// answers are already in, same as if those stragglers had simply stayed
-// connected-but-silent — instead of silently discarding it mid-flight just
-// because not every connected player had answered yet.
+// Lets admin:endGame finish the round already in progress instead of
+// silently discarding it mid-flight. Doesn't force an early resolution —
+// that would skip straight to the reveal for whoever hasn't answered yet,
+// which looks like their answer got filled in for them. Just flags it and
+// waits: if the round is still being answered, handleAction's normal "all
+// connected players have answered" check resolves it in due course; if it's
+// already resolved and sitting in the reveal pause, the scheduled callback
+// above picks up pendingFinish once that pause ends.
 function requestStop(io, state, finish) {
   const round = state.activeGame.roundState;
   if (!round) {
@@ -102,12 +106,6 @@ function requestStop(io, state, finish) {
     return;
   }
   round.pendingFinish = finish;
-  if (!round.revealTimeoutId) {
-    // Still being answered — resolve now rather than waiting on stragglers.
-    resolveRound(io, state);
-  }
-  // else: already resolved and sitting in the reveal pause — the scheduled
-  // callback above will pick up pendingFinish once that pause ends.
 }
 
 function start(io, state) {
