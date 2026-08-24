@@ -1,7 +1,7 @@
 // Template for every future game module: meta + start(io, state) + stop(io, state)
 // + handleAction(io, state, playerId, payload) for its own player:action events.
 const meta = require('./meta');
-const { broadcastLeaderboard, broadcastGameUpdate } = require('../../broadcast');
+const { broadcastLeaderboard, broadcastGameUpdate, sendPlayerUpdate } = require('../../broadcast');
 
 const QUESTION = {
   text: 'What is the capital of France?',
@@ -47,7 +47,7 @@ function handleAction(io, state, playerId, payload) {
     broadcastLeaderboard(io, state);
   } else {
     // Only this player gets the "wrong guess" update — everyone else's screen is untouched.
-    io.to(player.socketId).emit('game:update', {
+    sendPlayerUpdate(io, state, playerId, {
       question: QUESTION.text,
       options: QUESTION.options,
       wrongGuess: true,

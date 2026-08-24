@@ -64,6 +64,15 @@ function broadcastPartyStarted(io, state) {
   io.to('admin').to('tv').emit('state:partyStarted', state.partyStarted);
 }
 
+// For a single player's own view of the round (a secret role, private feedback)
+// rather than a whole-room update. Takes a playerId (not a socket) so it also
+// works from contexts that only have an id to go on, e.g. an admin action.
+function sendPlayerUpdate(io, state, playerId, payload) {
+  const player = state.players[playerId];
+  if (!player) return;
+  io.to(player.socketId).emit('game:update', payload);
+}
+
 module.exports = {
   getLeaderboard,
   getSnapshot,
@@ -71,4 +80,5 @@ module.exports = {
   broadcastActiveGame,
   broadcastPartyStarted,
   broadcastGameUpdate,
+  sendPlayerUpdate,
 };
