@@ -24,6 +24,9 @@ const server = http.createServer(app);
 const io = new Server(server);
 
 app.use(express.static(path.join(__dirname, 'public')));
+// Game content data (e.g. higherLower's mountain images) lives outside public/,
+// separate from the app shell — see CLAUDE.md's "What this is".
+app.use('/static', express.static(path.join(__dirname, 'static')));
 
 app.get('/admin', adminRoute);
 app.get('/play', playRoute);

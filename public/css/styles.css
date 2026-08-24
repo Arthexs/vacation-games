@@ -325,6 +325,51 @@ button.secondary:hover {
   padding: clamp(16px, 2.4vh, 32px) 10px;
 }
 
+.hl-cards {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 15px;
+}
+
+.hl-card {
+  flex: 1;
+  min-width: 0;
+  text-align: center;
+  background: #f7f7f7;
+  border-radius: 12px;
+  padding: 10px;
+}
+
+.hl-image {
+  display: block;
+  width: 100%;
+  height: 140px;
+  object-fit: cover;
+  border-radius: 8px;
+  margin-bottom: 8px;
+}
+
+.hl-name {
+  font-weight: bold;
+  color: #333;
+}
+
+.hl-value {
+  color: #667eea;
+  font-weight: bold;
+  font-size: 1.2em;
+}
+
+.hl-buttons {
+  display: flex;
+  gap: 10px;
+}
+
+.hl-buttons button {
+  flex: 1;
+  margin-top: 0;
+}
+
 .timer-banner {
   position: fixed;
   top: 20px;
