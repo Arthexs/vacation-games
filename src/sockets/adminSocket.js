@@ -46,4 +46,14 @@ module.exports = function registerAdminSocket(io, socket, state, gamesById) {
     player.score = score;
     broadcastLeaderboard(io, state);
   });
+
+  // Mirrors player:action -> handleAction: a way to steer a round already in
+  // progress (assign a secret role, start a discussion timer) rather than
+  // just starting/stopping the whole game. Optional — a game only exports
+  // handleAdminAction if it needs an admin-in-the-loop step.
+  socket.on('admin:action', (payload) => {
+    if (!state.activeGame) return;
+    const game = gamesById[state.activeGame.gameId];
+    if (game.handleAdminAction) game.handleAdminAction(io, state, payload);
+  });
 };

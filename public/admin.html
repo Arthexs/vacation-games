@@ -18,6 +18,10 @@
 
     <div id="activeGameSection" hidden>
       <p class="status-banner active" id="activeGameBanner"></p>
+      <!-- Filled by a game's own public/games/<id>/admin.js, if it has one —
+           e.g. role assignment, a "Start Timer" button. See src/timer.js and
+           adminSocket.js's admin:action handler. -->
+      <div id="gameControlSection" hidden></div>
       <button id="endGameBtn">End Game</button>
     </div>
 

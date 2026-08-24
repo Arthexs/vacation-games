@@ -325,6 +325,24 @@ button.secondary:hover {
   padding: clamp(16px, 2.4vh, 32px) 10px;
 }
 
+.player-picker {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.player-picker li {
+  flex: 1 1 auto;
+}
+
+.player-picker button {
+  width: auto;
+  margin-top: 0;
+  padding: 10px 18px;
+}
+
 .hl-cards {
   display: flex;
   gap: 15px;

@@ -98,6 +98,7 @@ Client → server:
 - `admin:selectGame` `{ gameId }` — starts a game: sets `activeGame`, calls that game's `start()`
 - `admin:endGame` — ends the current game: calls its `stop()`, folds final scores into `players`, clears `activeGame`
 - `admin:setScore` `{ playerId, score }` — manual override: sets a player's score directly (not additive), e.g. to recover a known score after their phone/app crashed mid-game
+- `admin:action` `{ payload }` — mirrors `player:action`/`handleAction`: steers a round already in progress (assigning a secret role, starting a discussion timer) rather than starting/stopping the whole game. Only forwarded to that game's own `handleAdminAction(io, state, payload)` if it exports one — most games don't. Two payload shapes cover today's games: `{ type: 'assignRole', playerId }` and `{ type: 'startTimer' }`, but a game can define its own.
 - `tv:join` — registers the tv socket
 
 Server → clients:
@@ -120,7 +121,9 @@ Every game folder under `src/games/` follows the same shape so the core server c
 
 This is the direct replacement for the old app's hardcoded `next_route` chaining — instead of one game automatically redirecting to the next, the admin explicitly starts and stops each one, and no game module needs to know what runs before or after it.
 
-A game only implements what it needs beyond this baseline: `broadcastTvContent`/`clearTvContent` (+ a `public/games/<name>/tv.js`) for a shared-screen moment, `startTimer` (`src/timer.js`) for a countdown, `sendPlayerUpdate` for a private per-player update. None of these are required — most games use only `start`/`stop`/`handleAction`, same as `demoGame`.
+A game only implements what it needs beyond this baseline: `broadcastTvContent`/`clearTvContent` (+ a `public/games/<name>/tv.js`) for a shared-screen moment, `startTimer` (`src/timer.js`) for a countdown, `sendPlayerUpdate` for a private per-player update, `handleAdminAction(io, state, payload)` (+ a `public/games/<name>/admin.js`) for an admin-in-the-loop step like role assignment. None of these are required — most games use only `start`/`stop`/`handleAction`, same as `demoGame`.
+
+A game's optional `public/games/<name>/admin.js` mirrors `play.js`'s `render(container, socket)` / `update(container, socket, payload)` shape, with one addition: both also receive a `helpers` object (currently just `helpers.renderPlayerPicker(container, onPick)`, rendering the connected-player list as tappable buttons for role assignment) so a game doesn't have to rebuild player-list rendering itself. Loaded by `public/js/admin.js` into `#gameControlSection`, shown alongside the "End Game" button while that game is active.
 
 ## Content data convention (for when the real games get built)
 
