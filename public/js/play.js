@@ -22,7 +22,13 @@ let players = [];
 // A game whose UI needs to show/pick other players (Spyfall/Imposter's vote,
 // Heads Up!'s spectator list) needs the current player list, which nothing
 // exposed to a game module before — mirrors admin.js's helpers.renderPlayerPicker.
-const gameHelpers = { getPlayers: () => players };
+// getSelfId reads the live `playerId` (set from this socket's own
+// player:joined/rejoin, not re-read from localStorage) rather than a game
+// module caching its own copy at script-load time — several tabs of the same
+// browser share one localStorage, so a game that cached
+// localStorage.getItem('vg_playerId') once could end up comparing against
+// whichever tab joined last instead of its own actual identity.
+const gameHelpers = { getPlayers: () => players, getSelfId: () => playerId };
 
 function escapeHtml(str) {
   const div = document.createElement('div');
@@ -112,6 +118,7 @@ socket.on('state:snapshot', (snapshot) => {
   players = snapshot.players;
   renderLeaderboard(snapshot.players);
   if (snapshot.activeGame) {
+    lastGameUpdatePayload = snapshot.activeGame.lastUpdate;
     enterGame(snapshot.activeGame.gameId);
   } else {
     showLeaderboard();

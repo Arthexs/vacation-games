@@ -37,7 +37,7 @@ const adminHelpers = {
 
     const randomBtn = document.createElement('button');
     randomBtn.type = 'button';
-    randomBtn.className = 'secondary';
+    randomBtn.className = 'secondary random-pick-btn';
     randomBtn.textContent = 'Select at Random';
     randomBtn.disabled = connected.length === 0;
     randomBtn.addEventListener('click', () => {
@@ -174,7 +174,15 @@ function updateGameAdmin() {
 
 function enterGameAdmin(gameId) {
   currentAdminGameId = gameId;
-  lastGameUpdatePayload = null;
+  // Deliberately not resetting lastGameUpdatePayload here: admin:selectGame
+  // calls game.start() (which broadcasts game:update synchronously) before
+  // broadcastActiveGame() (which fires state:activeGame, landing here) — so
+  // by the time this runs, the socket.on('game:update') handler below has
+  // already set lastGameUpdatePayload to the game's initial payload. Nulling
+  // it here would throw that away with nothing left to repopulate it, since
+  // start() only broadcasts once. clearGameAdmin() (called when a game ends)
+  // is what resets this between games — mirrors play.js's enterGame, which
+  // never resets it for the same reason.
   loadGameAdminScript(gameId, () => {
     const handlers = window.__vgAdminGames[gameId];
     if (!handlers) {
@@ -211,6 +219,7 @@ socket.on('state:snapshot', (snapshot) => {
   if (activeGame) {
     endGameBtn.disabled = false;
     endGameBtn.textContent = 'End Game';
+    lastGameUpdatePayload = activeGame.lastUpdate;
     enterGameAdmin(activeGame.gameId);
   }
 });

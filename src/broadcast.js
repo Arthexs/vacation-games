@@ -24,8 +24,15 @@ function getLeaderboard(state) {
   });
 }
 
+// lastUpdate lets a client that (re)connects mid-round replay the current
+// phase immediately instead of sitting blank until the next game:update
+// happens to fire — same stash-and-replay idea as tvContent/tvTimer below.
+// Safe to include here (unlike a per-player secret, which never goes through
+// broadcastGameUpdate/lastUpdatePayload in the first place).
 function getActiveGamePayload(state) {
-  return state.activeGame ? { gameId: state.activeGame.gameId } : null;
+  return state.activeGame
+    ? { gameId: state.activeGame.gameId, lastUpdate: state.activeGame.lastUpdatePayload || null }
+    : null;
 }
 
 function getSnapshot(state) {
