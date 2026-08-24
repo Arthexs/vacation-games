@@ -6,7 +6,7 @@ module.exports = {
     'The gamemaster picks one player as the Guesser each round and hands them the phone.',
     "Everyone else sees the word and gives clues out loud — the Guesser can't see it.",
     'The gamemaster starts the 60-second clock when the group is ready.',
-    'The Guesser taps Correct or Pass to move through as many words as possible.',
+    'The Guesser can only tap Pass to skip a word — bystanders tap Correct once they guess it right.',
     'Each correct guess scores a point for the Guesser.',
   ],
 };

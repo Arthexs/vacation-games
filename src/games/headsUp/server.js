@@ -1,13 +1,23 @@
 // Loops for the whole game session, unlike Spyfall/Imposter's one-and-done
 // round: pending -> admin picks a Guesser -> 60s active round -> back to
-// pending for the next Guesser -> ... until the admin ends the game.
+// pending for the next Guesser -> ... until the admin ends the game. /tv
+// shows who's guessing and a running correct-count, never the word itself —
+// unlike Spyfall/Imposter, the "secret" role here (the Guesser) is the one
+// person in the room who'd see a shared screen while playing.
 const meta = require('./meta');
 const words = require('./words');
-const { broadcastLeaderboard, broadcastGameUpdate, sendPlayerUpdate } = require('../../broadcast');
+const {
+  broadcastLeaderboard,
+  broadcastGameUpdate,
+  sendPlayerUpdate,
+  broadcastTvContent,
+  clearTvContent,
+} = require('../../broadcast');
 const { startTimer } = require('../../timer');
 
 const MIN_PLAYERS = 2; // a Guesser and at least one person to give clues
 const ROUND_SECONDS = 60; // specced explicitly in GAME_PLANS.md's timer-helper section
+const ADVANCE_DEBOUNCE_MS = 600; // absorbs several bystanders tapping Correct for the same word at once
 
 function connectedPlayerIds(state) {
   return Object.values(state.players).filter((p) => p.connected).map((p) => p.id);
@@ -31,6 +41,7 @@ function start(io, state) {
     usedWordIds: new Set(),
     correctCount: 0,
     timerHandle: null,
+    lastAdvanceAt: 0,
   };
   broadcastGameUpdate(io, state, { phase: 'pending' });
 }
@@ -38,13 +49,14 @@ function start(io, state) {
 function stop(io, state) {
   const round = state.activeGame.roundState;
   if (round && round.timerHandle) round.timerHandle.clear();
+  clearTvContent(io, state);
   state.activeGame.roundState = null;
 }
 
-// The Guesser must never see the word, spectators always need it — so this
-// is always per-player targeted sends, never a room-wide broadcast (which
-// would leak the word to the Guesser's own socket, since they're in the same
-// `players` room as everyone else).
+// The Guesser must never see the word, spectators always need it — so the
+// word itself is always a per-player targeted send, never a room-wide
+// broadcast (which would leak it to the Guesser's own socket, since they're
+// in the same `players` room as everyone else).
 function sendWordUpdates(io, state) {
   const round = state.activeGame.roundState;
   connectedPlayerIds(state).forEach((id) => {
@@ -53,6 +65,23 @@ function sendWordUpdates(io, state) {
     } else {
       sendPlayerUpdate(io, state, id, { phase: 'active', role: 'spectator', word: round.currentWord.text });
     }
+  });
+  // Room-wide (no word/role here — those went out above), so the admin
+  // panel actually learns the round moved past 'pending' and swaps its
+  // stale Guesser picker for the "Start Timer" button. Without this,
+  // admin.js never receives another game:update until the timer starts (if
+  // ever), left showing picker buttons that no longer do anything — same
+  // bug Spyfall/Imposter had.
+  broadcastGameUpdate(io, state, { phase: 'active' });
+  // /tv gets a safe, secret-free "who's up / how many so far" tally — never
+  // the word itself, unlike Spyfall's location deck or Imposter's clue log:
+  // those are safe for their "secret" role to see too, but the Guesser
+  // seeing the word on a shared screen would break the entire game.
+  const guesser = state.players[round.guesserId];
+  broadcastTvContent(io, state, {
+    phase: 'active',
+    guesserName: guesser ? guesser.name : null,
+    correctCount: round.correctCount,
   });
 }
 
@@ -110,13 +139,33 @@ function endRound(io, state) {
     lastRoundGuesserName: guesser ? guesser.name : null,
     lastRoundCorrectCount: correctCount,
   });
+  clearTvContent(io, state);
   broadcastLeaderboard(io, state);
 }
 
 function handleAction(io, state, playerId, payload) {
   const round = state.activeGame && state.activeGame.roundState;
-  if (!round || round.phase !== 'active' || playerId !== round.guesserId) return;
-  if (!payload.correct && !payload.pass) return;
+  if (!round || round.phase !== 'active') return;
+
+  // The Guesser can only Pass — they can't see the word, so they have no
+  // way to judge a correct guess themselves. Marking one correct is for the
+  // bystanders, who can both see the word and hear it get guessed.
+  if (payload.pass) {
+    if (playerId !== round.guesserId) return;
+  } else if (payload.correct) {
+    if (playerId === round.guesserId) return;
+    const player = state.players[playerId];
+    if (!player || !player.connected) return;
+  } else {
+    return;
+  }
+
+  // Several bystanders can plausibly tap Correct for the very same word
+  // within moments of each other — without this, each tap would advance
+  // (and score) the round again, skipping multiple words for one guess.
+  const now = Date.now();
+  if (now - round.lastAdvanceAt < ADVANCE_DEBOUNCE_MS) return;
+  round.lastAdvanceAt = now;
 
   if (payload.correct) round.correctCount += 1;
   round.currentWord = pickNextWord(round.usedWordIds);

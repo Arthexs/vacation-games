@@ -47,15 +47,21 @@
   function renderActive(container, socket) {
     const bodyEl = container.querySelector('#hu-body');
     if (myRole === 'guesser') {
+      // No Correct button here on purpose — the Guesser can't see the word,
+      // so they have no way to judge that themselves. Bystanders (who can
+      // see it and hear it get guessed) are the ones who mark it correct.
       bodyEl.innerHTML = `
         <p class="status-banner waiting">You're guessing! Everyone else can see the word — listen to their clues.</p>
-        <button type="button" id="hu-correct-btn">✔ Correct!</button>
         <button type="button" id="hu-pass-btn" class="secondary">Pass</button>
       `;
-      bodyEl.querySelector('#hu-correct-btn').addEventListener('click', () => socket.emit('player:action', { correct: true }));
       bodyEl.querySelector('#hu-pass-btn').addEventListener('click', () => socket.emit('player:action', { pass: true }));
     } else {
-      bodyEl.innerHTML = `<p class="hu-word">${myWord || '...'}</p><p class="subtitle">Give clues without saying the word!</p>`;
+      bodyEl.innerHTML = `
+        <p class="hu-word">${myWord || '...'}</p>
+        <p class="subtitle">Give clues without saying the word!</p>
+        <button type="button" id="hu-correct-btn">✔ Correct!</button>
+      `;
+      bodyEl.querySelector('#hu-correct-btn').addEventListener('click', () => socket.emit('player:action', { correct: true }));
     }
   }
 
