@@ -6,6 +6,11 @@ const joinBtn = document.getElementById('joinBtn');
 const leaderboardSection = document.getElementById('leaderboardSection');
 const leaderboardEl = document.getElementById('leaderboard');
 const gameSection = document.getElementById('gameSection');
+const rulesBtn = document.getElementById('rulesBtn');
+const rulesModal = document.getElementById('rulesModal');
+const rulesModalTitle = document.getElementById('rulesModalTitle');
+const rulesModalList = document.getElementById('rulesModalList');
+const rulesModalCloseBtn = document.getElementById('rulesModalCloseBtn');
 
 // Each public/games/<id>/play.js registers itself here on load, e.g.:
 //   window.__vgGames['demoGame'] = { render(container, socket, helpers), update(container, socket, payload, helpers) }
@@ -14,6 +19,11 @@ const loadedGameScripts = new Set();
 
 let playerId = localStorage.getItem('vg_playerId');
 let currentGameId = null;
+// Populated from state:activeGame/state:snapshot's activeGame payload —
+// see GAME_PLANS.md's "Rules display" core addition — so the "?" button
+// works immediately even for a player who joins/reconnects mid-game.
+let currentGameTitle = null;
+let currentGameRules = null;
 // Replayed into a game's update() once its script finishes loading, so a client that
 // joins/reconnects mid-round doesn't miss the game:update its start() already sent.
 let lastGameUpdatePayload = null;
@@ -53,6 +63,27 @@ function showGame() {
   leaderboardSection.hidden = true;
   gameSection.hidden = false;
 }
+
+function setActiveGameChrome(activeGame) {
+  currentGameTitle = activeGame ? activeGame.title : null;
+  currentGameRules = activeGame ? activeGame.rules : null;
+  rulesBtn.hidden = !activeGame;
+  if (!activeGame) rulesModal.hidden = true;
+}
+
+function openRulesModal() {
+  rulesModalTitle.textContent = currentGameTitle || '';
+  rulesModalList.innerHTML = (currentGameRules || [])
+    .map((rule) => `<li>${escapeHtml(rule)}</li>`)
+    .join('');
+  rulesModal.hidden = false;
+}
+
+rulesBtn.addEventListener('click', openRulesModal);
+rulesModalCloseBtn.addEventListener('click', () => { rulesModal.hidden = true; });
+rulesModal.addEventListener('click', (e) => {
+  if (e.target === rulesModal) rulesModal.hidden = true;
+});
 
 function renderLeaderboard(players) {
   leaderboardEl.innerHTML = '';
@@ -117,6 +148,7 @@ socket.on('player:rejoinFailed', () => {
 socket.on('state:snapshot', (snapshot) => {
   players = snapshot.players;
   renderLeaderboard(snapshot.players);
+  setActiveGameChrome(snapshot.activeGame);
   if (snapshot.activeGame) {
     lastGameUpdatePayload = snapshot.activeGame.lastUpdate;
     enterGame(snapshot.activeGame.gameId);
@@ -131,6 +163,7 @@ socket.on('state:leaderboard', (updatedPlayers) => {
 });
 
 socket.on('state:activeGame', (activeGame) => {
+  setActiveGameChrome(activeGame);
   if (activeGame) {
     enterGame(activeGame.gameId);
   } else {

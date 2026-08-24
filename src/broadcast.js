@@ -29,9 +29,17 @@ function getLeaderboard(state) {
 // happens to fire — same stash-and-replay idea as tvContent/tvTimer below.
 // Safe to include here (unlike a per-player secret, which never goes through
 // broadcastGameUpdate/lastUpdatePayload in the first place).
+// title/rules are stashed on activeGame by admin:selectGame (src/sockets/adminSocket.js)
+// so a player who joins/reconnects mid-game can render the "?" rules modal
+// immediately from this payload alone, with no separate round-trip.
 function getActiveGamePayload(state) {
   return state.activeGame
-    ? { gameId: state.activeGame.gameId, lastUpdate: state.activeGame.lastUpdatePayload || null }
+    ? {
+      gameId: state.activeGame.gameId,
+      title: state.activeGame.title,
+      rules: state.activeGame.rules,
+      lastUpdate: state.activeGame.lastUpdatePayload || null,
+    }
     : null;
 }
 

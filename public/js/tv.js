@@ -131,12 +131,30 @@ socket.on('state:partyStarted', (newPartyStarted) => {
   if (gameContentSection.hidden) showDefaultSection();
 });
 
+// Every game's rules are just a title plus some bullet text, so this is
+// rendered generically here rather than needing a per-game tv.js just for
+// it — see GAME_PLANS.md's "Rules display" core addition. admin:selectGame
+// pushes this briefly, then hands /tv back to whatever the game shows next.
+function renderRulesBanner(payload) {
+  const rulesHtml = (payload.rules || []).map((r) => `<li>${escapeHtml(r)}</li>`).join('');
+  gameContentSection.innerHTML = `
+    <h1>${escapeHtml(payload.title || '')}</h1>
+    <ul class="rules-list">${rulesHtml}</ul>
+  `;
+}
+
 socket.on('tv:content', (content) => {
   if (!content) {
     showDefaultSection();
     return;
   }
   const { gameId, payload } = content;
+  if (payload && payload.type === 'rules') {
+    gameContentSection.innerHTML = '';
+    renderRulesBanner(payload);
+    showSection('gameContent');
+    return;
+  }
   loadTvGameScript(gameId, () => {
     const handlers = window.__vgTvGames[gameId];
     if (!handlers) return;

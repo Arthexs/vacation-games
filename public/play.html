@@ -24,6 +24,18 @@
     <div id="gameSection" hidden></div>
   </div>
 
+  <!-- Persistent while a game is active — see GAME_PLANS.md's "Rules
+       display" core addition. Outside .card so a game's own render() (which
+       replaces #gameSection's contents wholesale) never wipes it out. -->
+  <button type="button" id="rulesBtn" class="rules-fab" hidden>?</button>
+  <div class="modal-overlay" id="rulesModal" hidden>
+    <div class="modal-card">
+      <h2 id="rulesModalTitle"></h2>
+      <ul class="rules-list" id="rulesModalList"></ul>
+      <button type="button" id="rulesModalCloseBtn" class="secondary">Close</button>
+    </div>
+  </div>
+
   <script src="/socket.io/socket.io.js"></script>
   <script src="/js/play.js"></script>
 </body>

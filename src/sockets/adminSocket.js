@@ -2,8 +2,15 @@ const {
   broadcastLeaderboard,
   broadcastActiveGame,
   broadcastPartyStarted,
+  broadcastTvContent,
+  clearTvContent,
   getSnapshot,
 } = require('../broadcast');
+
+// GAME_PLANS.md's "Rules display" addition suggested 10-15s — long enough to
+// read, short enough not to stall a game that wants /tv sooner (Wits &
+// Wagers, Drawful), which just takes it back over once this expires.
+const RULES_DISPLAY_MS = 12000;
 
 // Registered once per connected socket (see server.js). Access control is just
 // the /admin URL being unshared — there's no auth check on these events.
@@ -24,9 +31,30 @@ module.exports = function registerAdminSocket(io, socket, state, gamesById) {
     const game = gamesById[gameId];
     if (!game) return;
 
-    state.activeGame = { gameId, roundState: null };
+    state.activeGame = { gameId, roundState: null, title: game.meta.title, rules: game.meta.rules || [] };
     game.start(io, state);
     broadcastActiveGame(io, state);
+
+    // Briefly override /tv with the rules before handing control back to
+    // whatever the game shows next — its own tv:content (Wits & Wagers,
+    // Drawful may have already pushed something in start(), captured below
+    // and restored), or the leaderboard for a game that hasn't pushed
+    // anything yet (Spyfall/Imposter/Heads Up! wait on the admin to pick a
+    // role first). Reference equality on rulesPayload is how the timeout
+    // below tells "nothing has changed since" apart from "the game already
+    // pushed newer content, don't stomp on it."
+    const preRulesTvContent = state.activeGame.tvContent || null;
+    const rulesPayload = { type: 'rules', title: game.meta.title, rules: game.meta.rules || [] };
+    broadcastTvContent(io, state, rulesPayload);
+    setTimeout(() => {
+      if (!state.activeGame || state.activeGame.gameId !== gameId) return; // game ended/changed since
+      if (state.activeGame.tvContent !== rulesPayload) return; // game already pushed something newer
+      if (preRulesTvContent) {
+        broadcastTvContent(io, state, preRulesTvContent);
+      } else {
+        clearTvContent(io, state);
+      }
+    }, RULES_DISPLAY_MS);
   });
 
   socket.on('admin:endGame', () => {
