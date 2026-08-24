@@ -79,7 +79,35 @@ function resolveRound(io, state) {
   });
   broadcastLeaderboard(io, state);
 
-  round.revealTimeoutId = setTimeout(() => startNextRound(io, state), REVEAL_PAUSE_MS);
+  round.revealTimeoutId = setTimeout(() => {
+    round.revealTimeoutId = null;
+    if (round.pendingFinish) {
+      const finish = round.pendingFinish;
+      round.pendingFinish = null;
+      finish();
+    } else {
+      startNextRound(io, state);
+    }
+  }, REVEAL_PAUSE_MS);
+}
+
+// Lets admin:endGame finish the round already in progress — with whatever
+// answers are already in, same as if those stragglers had simply stayed
+// connected-but-silent — instead of silently discarding it mid-flight just
+// because not every connected player had answered yet.
+function requestStop(io, state, finish) {
+  const round = state.activeGame.roundState;
+  if (!round) {
+    finish();
+    return;
+  }
+  round.pendingFinish = finish;
+  if (!round.revealTimeoutId) {
+    // Still being answered — resolve now rather than waiting on stragglers.
+    resolveRound(io, state);
+  }
+  // else: already resolved and sitting in the reveal pause — the scheduled
+  // callback above will pick up pendingFinish once that pause ends.
 }
 
 function start(io, state) {
@@ -125,4 +153,4 @@ function handleAction(io, state, playerId, payload) {
   if (allAnswered) resolveRound(io, state);
 }
 
-module.exports = { meta, start, stop, handleAction };
+module.exports = { meta, start, stop, handleAction, requestStop };

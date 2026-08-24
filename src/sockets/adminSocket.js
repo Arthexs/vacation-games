@@ -32,10 +32,24 @@ module.exports = function registerAdminSocket(io, socket, state, gamesById) {
   socket.on('admin:endGame', () => {
     if (!state.activeGame) return;
     const game = gamesById[state.activeGame.gameId];
-    game.stop(io, state);
-    state.activeGame = null;
-    broadcastActiveGame(io, state);
-    broadcastLeaderboard(io, state);
+
+    const finishEndGame = () => {
+      game.stop(io, state);
+      state.activeGame = null;
+      broadcastActiveGame(io, state);
+      broadcastLeaderboard(io, state);
+    };
+
+    // Optional: a game with a "some players answered, some haven't" round
+    // (e.g. higherLower) can hold off on finishEndGame until that round
+    // resolves naturally, instead of the round just getting silently
+    // discarded mid-flight. A game without requestStop ends immediately,
+    // exactly as before.
+    if (game.requestStop) {
+      game.requestStop(io, state, finishEndGame);
+    } else {
+      finishEndGame();
+    }
   });
 
   // Manual override — e.g. restoring a score after a player's phone/app crashed

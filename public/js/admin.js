@@ -176,7 +176,14 @@ function enterGameAdmin(gameId) {
 }
 
 startPartyBtn.addEventListener('click', () => socket.emit('admin:startParty'));
-endGameBtn.addEventListener('click', () => socket.emit('admin:endGame'));
+endGameBtn.addEventListener('click', () => {
+  socket.emit('admin:endGame');
+  // Some games (e.g. higherLower) finish their in-progress round before
+  // actually ending — state:activeGame won't go null right away. Without
+  // this, the button just sits there looking unclicked for a few seconds.
+  endGameBtn.disabled = true;
+  endGameBtn.textContent = 'Ending after this round...';
+});
 
 socket.on('connect', () => socket.emit('admin:join'));
 
@@ -188,7 +195,11 @@ socket.on('state:snapshot', (snapshot) => {
   renderGameList();
   renderLeaderboard(snapshot.players);
   renderSections();
-  if (activeGame) enterGameAdmin(activeGame.gameId);
+  if (activeGame) {
+    endGameBtn.disabled = false;
+    endGameBtn.textContent = 'End Game';
+    enterGameAdmin(activeGame.gameId);
+  }
 });
 
 socket.on('state:leaderboard', (updatedPlayers) => {
@@ -199,8 +210,13 @@ socket.on('state:leaderboard', (updatedPlayers) => {
 
 socket.on('state:activeGame', (newActiveGame) => {
   activeGame = newActiveGame;
-  if (activeGame) enterGameAdmin(activeGame.gameId);
-  else clearGameAdmin();
+  if (activeGame) {
+    endGameBtn.disabled = false;
+    endGameBtn.textContent = 'End Game';
+    enterGameAdmin(activeGame.gameId);
+  } else {
+    clearGameAdmin();
+  }
   renderSections();
 });
 
