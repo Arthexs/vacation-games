@@ -6,7 +6,7 @@ Planning document only — no implementation yet. This lays out the project stru
 
 Three kinds of screens, three jobs:
 
-- **TV** (`/tv`) — before the admin starts the party, shows a join lobby (connected player list + QR code to `/play`). Once the admin starts the party, switches to the live leaderboard for the rest of it, full stop. Never renders a game's board or any game-specific content — just standings, all the time a game is running or not. Purely passive/read-only.
+- **TV** (`/tv`) — before the admin starts the party, shows a join lobby (connected player list + QR code to `/play`). Once the admin starts the party, switches to the live leaderboard by default. A game can optionally take over the screen for a shared moment (a drawing, a guess board) via the `tv:content` channel — see "Core interaction contract" — and hand it back to the leaderboard when done; most games never do this and `/tv` just shows standings the whole time. Purely passive/read-only either way — it never sends anything back to the server.
 - **Players** (`/play`) — each phone is an input device / controller. Enters a name once. When no game is active, the phone shows the leaderboard too (so players can check rank without looking up at the TV). When a game is active, the phone switches to that game's screen and sends actions (answers, guesses, buzzes) for it.
 - **Admin** (`/admin`) — the control room. Picks which game runs next from a list, starts it, ends it, watches the live leaderboard. Reached only via an unshared URL — see "Admin access" below.
 
@@ -43,8 +43,7 @@ vacation-games/
       demoGame/                 # built first — proves the whole pipeline works, doubles as the template for the rest
         meta.js                  # {id, title, description}
         server.js                # this game's socket event handlers + scoring logic
-      # higherLower/, mountainQuiz/, scrollChallenge/, rotationChallenge/ — left open for now.
-      # Built later, each following the exact same shape as demoGame/.
+      # each real game later, following the exact same shape as demoGame/.
 
   public/                      # static files Express serves directly, no build step
     css/
@@ -52,17 +51,19 @@ vacation-games/
     js/
       admin.js                  # admin page client logic
       play.js                   # player page client logic (switches between leaderboard view and active-game view)
-      tv.js                     # tv page client logic (lobby + leaderboard)
+      tv.js                     # tv page client logic (lobby, leaderboard, and any game's tv:content takeover)
     games/
       demoGame/
         play.js                  # renders + handles this game inside the player page's game area
-      # one folder per real game later, same shape — no tv.js needed anywhere, since tv never shows game content
+        # tv.js   — optional: only if this game takes over /tv via tv:content (see below)
+        # admin.js — optional: only if this game needs an admin-in-the-loop step (role assignment, "start timer")
+      # one folder per real game later, same shape
     admin.html
     play.html
     tv.html
 ```
 
-Each future game gets one folder under `src/games/<name>/` (server-side rules and scoring) and a matching one under `public/games/<name>/` (client-side rendering, player screen only — never a tv variant). That symmetry is the whole point: adding your next custom game later means adding one new folder pair and registering it, not touching the core server. `demoGame` is the first one built, specifically to prove that pattern works end-to-end before the real four games get written into it.
+Each future game gets one folder under `src/games/<name>/` (server-side rules and scoring) and a matching one under `public/games/<name>/` (client-side rendering). That symmetry is the whole point: adding your next custom game later means adding one new folder pair and registering it, not touching the core server. Most games only need `play.js` there; `tv.js` and `admin.js` are optional per-game files a game adds only if it needs a TV takeover or an admin-driven step — see "Core interaction contract" and "Game module contract" below. `demoGame` is the first one built, specifically to prove the baseline pattern works end-to-end.
 
 ## Shared state (conceptual shape, not code)
 
@@ -105,7 +106,9 @@ Server → clients:
 - `state:activeGame` (→ `admin`, `players`) — sent whenever the active game changes, tells player phones whether to show the leaderboard or switch to the game view
 - `state:partyStarted` (→ `admin`, `tv`) — sent when the admin starts the party
 - `tv:lobbyInfo` (→ `tv`, on join) — `{ joinUrl, qrDataUrl }` for the pre-game lobby, computed once at startup by `lobbyInfo.js`
-- `game:update` (→ `players`) — whatever the active game's own module needs to push (its payload shape is defined per-game, not by the core contract). Whole-room updates should go through `broadcastGameUpdate(io, state, payload)` (`src/broadcast.js`) rather than emitting directly — it stashes the payload on `activeGame.lastUpdatePayload` so a player who joins or reconnects mid-round is replayed the current state immediately instead of waiting on the next update. A per-player-only update (e.g. private "wrong guess" feedback) should keep emitting directly to that one socket.
+- `game:update` (→ `players`) — whatever the active game's own module needs to push (its payload shape is defined per-game, not by the core contract). Whole-room updates should go through `broadcastGameUpdate(io, state, payload)` (`src/broadcast.js`) rather than emitting directly — it stashes the payload on `activeGame.lastUpdatePayload` so a player who joins or reconnects mid-round is replayed the current state immediately instead of waiting on the next update. A per-player-only update (e.g. a secret role, private "wrong guess" feedback) should use `sendPlayerUpdate(io, state, playerId, payload)` instead, which emits the same `game:update` event to just that one player's socket.
+- `tv:content` (→ `tv`) — `{ gameId, payload } | null`, for a game that takes over `/tv` for a shared-screen moment instead of the default leaderboard. Sent via `broadcastTvContent(io, state, payload)` (`src/broadcast.js`), which fills in `gameId` from `activeGame` and stashes it on `activeGame.tvContent` so a TV that reloads mid-round is caught up (`tvSocket.js`). `gameId` tells `public/js/tv.js` which game's own `public/games/<id>/tv.js` to load and hand the payload to — same `render(container)` / `update(container, payload)` shape as a game's `play.js`, minus the socket, since `/tv` never sends actions. A game **must** call `clearTvContent(io, state)` (sends `tv:content` as `null`) once its shared-screen phase ends, including from its own `stop()`, or `/tv` gets stuck showing stale content.
+- `tv:timer` (→ `tv`) — `{ startedAt, durationMs, label? } | null`, a countdown banner layered on top of whatever `/tv` is already showing (lobby, leaderboard, or a `tv:content` takeover). Deliberately a separate channel from `tv:content` — a game that only needs a visible clock doesn't need a `tv.js`. Started via `startTimer(io, state, { seconds, label, onComplete })` (`src/timer.js`), which also stashes the payload on `activeGame.tvTimer` for reconnect catch-up, and keeps its own authoritative server-side `setTimeout` (so a backgrounded phone tab drifting doesn't stall the round) that fires `onComplete` and clears the banner. Returns a handle whose `.clear()` a game's `stop()` should call if the admin ends the round before the timer completes. A game merges the returned `timer` payload into its own player-facing update itself — `startTimer` only owns the `/tv` banner and the authoritative timeout, not what players see.
 
 ## Game module contract
 
@@ -113,9 +116,11 @@ Every game folder under `src/games/` follows the same shape so the core server c
 
 - `meta` — id, title, description (shown in the admin's picker)
 - `start(io, state)` — called on `admin:selectGame`: sets up `activeGame.roundState`, wires this game's own `player:action` handling, sends the first `game:update` (via `broadcastGameUpdate`, see "Core interaction contract")
-- `stop(io, state)` — called on `admin:endGame`: tears down this game's handling, folds any final scores into `players[id].score`, clears `activeGame`
+- `stop(io, state)` — called on `admin:endGame`: tears down this game's handling, folds any final scores into `players[id].score`, clears `activeGame`. If the game used `broadcastTvContent` and/or `startTimer`, this is also where it calls `clearTvContent`/the timer handle's `.clear()`, so the admin ending a round early doesn't leave `/tv` stuck.
 
 This is the direct replacement for the old app's hardcoded `next_route` chaining — instead of one game automatically redirecting to the next, the admin explicitly starts and stops each one, and no game module needs to know what runs before or after it.
+
+A game only implements what it needs beyond this baseline: `broadcastTvContent`/`clearTvContent` (+ a `public/games/<name>/tv.js`) for a shared-screen moment, `startTimer` (`src/timer.js`) for a countdown, `sendPlayerUpdate` for a private per-player update. None of these are required — most games use only `start`/`stop`/`handleAction`, same as `demoGame`.
 
 ## Content data convention (for when the real games get built)
 

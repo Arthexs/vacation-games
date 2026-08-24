@@ -8,8 +8,11 @@ module.exports = function registerTvSocket(io, socket, state, lobbyInfo) {
     socket.emit('state:snapshot', getSnapshot(state));
     socket.emit('tv:lobbyInfo', lobbyInfo);
 
-    // Catches this socket up on an in-progress timer instead of leaving it
-    // stuck with no countdown until the next tick happens to fire.
+    // Catches this socket up on an in-progress game takeover/timer instead of
+    // leaving it stuck on the leaderboard until the next update happens to fire.
+    if (state.activeGame && state.activeGame.tvContent) {
+      socket.emit('tv:content', { gameId: state.activeGame.gameId, payload: state.activeGame.tvContent });
+    }
     if (state.activeGame && state.activeGame.tvTimer) {
       socket.emit('tv:timer', state.activeGame.tvTimer);
     }

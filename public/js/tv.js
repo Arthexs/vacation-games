@@ -2,6 +2,7 @@ const socket = io();
 
 const lobbySection = document.getElementById('lobbySection');
 const leaderboardSection = document.getElementById('leaderboardSection');
+const gameContentSection = document.getElementById('gameContentSection');
 const qrImage = document.getElementById('qrImage');
 const joinUrlText = document.getElementById('joinUrlText');
 const playerCountText = document.getElementById('playerCountText');
@@ -12,6 +13,13 @@ const timerLabelEl = document.getElementById('timerLabel');
 const timerValueEl = document.getElementById('timerValue');
 
 let players = [];
+let partyStarted = false;
+
+// Each public/games/<id>/tv.js registers itself here on load, e.g.:
+//   window.__vgTvGames['drawful'] = { render(container), update(container, payload) }
+// No socket is passed through — /tv is purely passive, it never emits actions.
+window.__vgTvGames = window.__vgTvGames || {};
+const loadedTvGameScripts = new Set();
 let timerInterval = null;
 
 function escapeHtml(str) {
@@ -43,14 +51,31 @@ function renderLeaderboard() {
   });
 }
 
-function showLobby() {
-  lobbySection.hidden = false;
-  leaderboardSection.hidden = true;
+// Three mutually exclusive sections. A game's tv:content takeover (gameContent)
+// wins over the default lobby/leaderboard choice until it's cleared.
+function showSection(section) {
+  lobbySection.hidden = section !== 'lobby';
+  leaderboardSection.hidden = section !== 'leaderboard';
+  gameContentSection.hidden = section !== 'gameContent';
 }
 
-function showLeaderboard() {
-  lobbySection.hidden = true;
-  leaderboardSection.hidden = false;
+function showDefaultSection() {
+  showSection(partyStarted ? 'leaderboard' : 'lobby');
+}
+
+// Loaded on demand so adding a new game's tv.js never requires editing this file.
+function loadTvGameScript(gameId, onReady) {
+  if (loadedTvGameScripts.has(gameId)) {
+    onReady();
+    return;
+  }
+  const script = document.createElement('script');
+  script.src = `/games/${gameId}/tv.js`;
+  script.onload = () => {
+    loadedTvGameScripts.add(gameId);
+    onReady();
+  };
+  document.head.appendChild(script);
 }
 
 function stopTimerDisplay() {
@@ -88,10 +113,10 @@ socket.on('tv:lobbyInfo', ({ joinUrl, qrDataUrl }) => {
 
 socket.on('state:snapshot', (snapshot) => {
   players = snapshot.players;
+  partyStarted = snapshot.partyStarted;
   renderLobbyPlayers();
   renderLeaderboard();
-  if (snapshot.partyStarted) showLeaderboard();
-  else showLobby();
+  showDefaultSection();
 });
 
 socket.on('state:leaderboard', (updatedPlayers) => {
@@ -100,9 +125,26 @@ socket.on('state:leaderboard', (updatedPlayers) => {
   renderLeaderboard();
 });
 
-socket.on('state:partyStarted', (partyStarted) => {
-  if (partyStarted) showLeaderboard();
-  else showLobby();
+socket.on('state:partyStarted', (newPartyStarted) => {
+  partyStarted = newPartyStarted;
+  // A game's tv:content takeover (if any) stays up regardless of party state.
+  if (gameContentSection.hidden) showDefaultSection();
+});
+
+socket.on('tv:content', (content) => {
+  if (!content) {
+    showDefaultSection();
+    return;
+  }
+  const { gameId, payload } = content;
+  loadTvGameScript(gameId, () => {
+    const handlers = window.__vgTvGames[gameId];
+    if (!handlers) return;
+    gameContentSection.innerHTML = '';
+    if (handlers.render) handlers.render(gameContentSection);
+    if (handlers.update) handlers.update(gameContentSection, payload);
+    showSection('gameContent');
+  });
 });
 
 socket.on('tv:timer', (payload) => {

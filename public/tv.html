@@ -33,6 +33,10 @@
     <ul class="leaderboard-list" id="leaderboard"></ul>
   </div>
 
+  <!-- Filled by a game's own public/games/<id>/tv.js when it takes over the
+       screen via tv:content — see broadcastTvContent in src/broadcast.js. -->
+  <div class="card tv-card" id="gameContentSection" hidden></div>
+
   <script src="/socket.io/socket.io.js"></script>
   <script src="/js/tv.js"></script>
 </body>

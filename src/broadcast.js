@@ -64,6 +64,25 @@ function broadcastPartyStarted(io, state) {
   io.to('admin').to('tv').emit('state:partyStarted', state.partyStarted);
 }
 
+// Lets a game take over /tv for a shared-screen moment (a drawing, a guess board)
+// instead of the leaderboard. gameId rides along so tv.js knows which game's own
+// public/games/<id>/tv.js to load and hand the payload to. Stashed on activeGame
+// the same way broadcastGameUpdate stashes lastUpdatePayload, so a TV that
+// reloads mid-round is caught up by tvSocket.js instead of falling back to the
+// leaderboard until the next update happens to fire.
+function broadcastTvContent(io, state, payload) {
+  state.activeGame.tvContent = payload;
+  io.to('tv').emit('tv:content', { gameId: state.activeGame.gameId, payload });
+}
+
+// Hands /tv back to the leaderboard/lobby. A game that uses broadcastTvContent
+// must call this itself once its shared-screen phase ends (including from its
+// own stop()) — the core server won't do this automatically.
+function clearTvContent(io, state) {
+  if (state.activeGame) state.activeGame.tvContent = null;
+  io.to('tv').emit('tv:content', null);
+}
+
 // A standalone countdown banner for /tv, deliberately separate from tv:content:
 // it can layer on top of the lobby, the leaderboard, or a tv:content takeover,
 // so a game that only needs a visible clock (no full-screen content) doesn't
@@ -94,6 +113,8 @@ module.exports = {
   broadcastActiveGame,
   broadcastPartyStarted,
   broadcastGameUpdate,
+  broadcastTvContent,
+  clearTvContent,
   broadcastTvTimer,
   clearTvTimer,
   sendPlayerUpdate,
