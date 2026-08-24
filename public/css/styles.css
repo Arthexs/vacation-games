@@ -325,6 +325,27 @@ button.secondary:hover {
   padding: clamp(16px, 2.4vh, 32px) 10px;
 }
 
+.df-canvas {
+  display: block;
+  width: 100%;
+  max-width: 500px;
+  aspect-ratio: 500 / 350;
+  margin: 0 auto 15px;
+  border: 2px solid #ddd;
+  border-radius: 10px;
+  touch-action: none;
+  background: white;
+}
+
+.df-drawing {
+  display: block;
+  width: 100%;
+  max-width: 500px;
+  margin: 0 auto 15px;
+  border: 2px solid #ddd;
+  border-radius: 10px;
+}
+
 .wl-scale-track {
   position: relative;
   height: 60px;

@@ -161,7 +161,7 @@ New, doesn't exist in the old project at all:
 
 1. Core shell: `server.js`, `state.js`, the three routes, the three socket handlers, the core interaction contract above. **Done.**
 2. `demoGame` — one simple working game (e.g. a single-question round) wired through the real contract, to prove admin → play → tv works live end to end. **Done.**
-3. Real games — see `GAME_PLANS.md` for full specs and build order. `higherLower`, `spyfall`, `imposter`, `headsUp`, `witsAndWagers`, `wavelength` **done.** Drawful (and whatever else `GAME_PLANS.md` has picked up since) — **open, current focus.** Built one at a time, each following `demoGame`'s shape, pulling in whichever of `GAME_PLANS.md`'s core contract additions it needs.
+3. Real games — see `GAME_PLANS.md` for full specs and build order. `higherLower`, `spyfall`, `imposter`, `headsUp`, `witsAndWagers`, `wavelength`, `drawful` **done** — every game currently specced in `GAME_PLANS.md` is built. Built one at a time, each following `demoGame`'s shape, pulling in whichever of `GAME_PLANS.md`'s core contract additions it needs.
 
 Also built along the way, beyond the original three steps: competition-ranking tie handling, the `/tv` pre-game lobby (`admin:startParty`, QR join), the admin score override (`admin:setScore`), mid-round join/reconnect catch-up (`broadcastGameUpdate`), and `GAME_PLANS.md`'s core contract additions #1–#3 (`tv:content` takeover, the shared `/tv` timer, `sendPlayerUpdate`) — all folded into the sections above.
 
