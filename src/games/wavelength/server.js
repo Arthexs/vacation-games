@@ -1,6 +1,9 @@
 // Loops for the whole game session, like headsUp: pending -> admin picks the
 // Clue Giver -> clueGiving -> guessing -> reveal -> pending -> repeat until
-// the admin ends the game.
+// the admin ends the game. No admin-triggered guess timer — the round
+// already resolves on its own once every connected guesser has locked in a
+// guess (see handleAction below), so a timer would only ever have added
+// pressure, not gated anything.
 const meta = require('./meta');
 const spectrums = require('./spectrums');
 const {
@@ -10,10 +13,8 @@ const {
   broadcastTvContent,
   clearTvContent,
 } = require('../../broadcast');
-const { startTimer } = require('../../timer');
 
 const MIN_PLAYERS = 2; // specced explicitly: 1 Clue Giver + 1 Guesser minimum
-const GUESS_SECONDS = 30; // not specced — a reasonable v1 default
 const REVEAL_PAUSE_MS = 6000; // longer than other games' — there's a plotted scale to actually read
 
 function connectedPlayerIds(state) {
@@ -34,7 +35,6 @@ function start(io, state) {
     target: null, // 1-10, secret to everyone but the Clue Giver until reveal
     clue: null,
     guesses: {}, // playerId -> 1-10
-    timerHandle: null,
     revealTimeoutId: null,
   };
   broadcastGameUpdate(io, state, { phase: 'pending' });
@@ -42,7 +42,6 @@ function start(io, state) {
 
 function stop(io, state) {
   const round = state.activeGame.roundState;
-  if (round && round.timerHandle) round.timerHandle.clear();
   // Otherwise, ending the game mid-reveal-pause leaves this scheduled — it
   // would fire later and crash trying to read the now-null roundState.
   if (round && round.revealTimeoutId) clearTimeout(round.revealTimeoutId);
@@ -52,57 +51,38 @@ function stop(io, state) {
 
 function handleAdminAction(io, state, payload) {
   const round = state.activeGame && state.activeGame.roundState;
-  if (!round) return;
+  if (!round || payload.type !== 'assignRole') return;
+  if (round.phase !== 'pending') return;
+  if (connectedPlayerIds(state).length < MIN_PLAYERS) return;
+  const clueGiver = state.players[payload.playerId];
+  if (!clueGiver || !clueGiver.connected) return;
 
-  if (payload.type === 'assignRole') {
-    if (round.phase !== 'pending') return;
-    if (connectedPlayerIds(state).length < MIN_PLAYERS) return;
-    const clueGiver = state.players[payload.playerId];
-    if (!clueGiver || !clueGiver.connected) return;
+  round.clueGiverId = clueGiver.id;
+  round.target = 1 + Math.floor(Math.random() * 10);
+  round.phase = 'clueGiving';
+  const { left, right } = round.spectrum;
 
-    round.clueGiverId = clueGiver.id;
-    round.target = 1 + Math.floor(Math.random() * 10);
-    round.phase = 'clueGiving';
-    const { left, right } = round.spectrum;
-
-    connectedPlayerIds(state).forEach((id) => {
-      if (id === clueGiver.id) {
-        sendPlayerUpdate(io, state, id, { phase: 'clueGiving', role: 'cluegiver', left, right, target: round.target });
-      } else {
-        sendPlayerUpdate(io, state, id, { phase: 'clueGiving', role: 'guesser', left, right });
-      }
-    });
-    // Labels only — safe for everyone including the Clue Giver, this is the
-    // shared axis the room is working with before a clue even exists.
-    broadcastTvContent(io, state, { phase: 'clueGiving', left, right });
-    return;
-  }
-
-  if (payload.type === 'startTimer') {
-    if (round.phase !== 'guessing' || round.timerHandle) return;
-    round.timerHandle = startTimer(io, state, {
-      seconds: GUESS_SECONDS,
-      label: 'Guess the target',
-      onComplete: () => resolveRound(io, state),
-    });
-    // No target/number here — safe to broadcast to everyone. tv's countdown
-    // banner layers on automatically via startTimer, no separate tv push needed.
-    broadcastGameUpdate(io, state, {
-      phase: 'guessing',
-      left: round.spectrum.left,
-      right: round.spectrum.right,
-      clue: round.clue,
-      timer: round.timerHandle.timer,
-    });
-  }
+  connectedPlayerIds(state).forEach((id) => {
+    if (id === clueGiver.id) {
+      sendPlayerUpdate(io, state, id, { phase: 'clueGiving', role: 'cluegiver', left, right, target: round.target });
+    } else {
+      sendPlayerUpdate(io, state, id, { phase: 'clueGiving', role: 'guesser', left, right });
+    }
+  });
+  // Room-wide (no target — that went out above, cluegiver-only), so the
+  // admin panel actually learns the round moved past 'pending' and swaps
+  // its stale Clue Giver picker for the "waiting for a clue" message.
+  // Without this, admin.js never receives another game:update until the
+  // Clue Giver submits a clue (if ever), left showing picker buttons that
+  // no longer do anything — same bug Spyfall/Imposter/Heads Up! had.
+  broadcastGameUpdate(io, state, { phase: 'clueGiving', left, right });
+  // Labels only — safe for everyone including the Clue Giver, this is the
+  // shared axis the room is working with before a clue even exists.
+  broadcastTvContent(io, state, { phase: 'clueGiving', left, right });
 }
 
 function resolveRound(io, state) {
   const round = state.activeGame.roundState;
-  if (round.timerHandle) {
-    round.timerHandle.clear();
-    round.timerHandle = null;
-  }
 
   const results = {};
   const points = [];
@@ -150,7 +130,6 @@ function startNextRound(io, state) {
     target: null,
     clue: null,
     guesses: {},
-    timerHandle: null,
     revealTimeoutId: null,
   };
   broadcastGameUpdate(io, state, { phase: 'pending' });

@@ -27,14 +27,7 @@
     }
 
     if (payload.phase === 'guessing') {
-      if (payload.timer) {
-        bodyEl.innerHTML = '<p class="status-banner active">Guess timer running.</p>';
-      } else {
-        bodyEl.innerHTML = '<button type="button" id="wl-start-timer-btn">Start Guess Timer</button>';
-        bodyEl.querySelector('#wl-start-timer-btn').addEventListener('click', () => {
-          socket.emit('admin:action', { type: 'startTimer' });
-        });
-      }
+      bodyEl.innerHTML = '<p class="subtitle">Guessing in progress — no admin action needed until everyone\'s locked in.</p>';
       return;
     }
 

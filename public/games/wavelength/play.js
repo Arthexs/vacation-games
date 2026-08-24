@@ -2,46 +2,21 @@
   let myRole = null; // cached across update() calls, same reasoning as spyfall/imposter/headsUp
   let myTarget = null;
   let hasGuessed = false;
-  let timerInterval = null;
 
   function render(container) {
     container.innerHTML = `
       <h1>Wavelength</h1>
       <p class="subtitle" id="wl-spectrum-text"></p>
       <p class="status-banner" id="wl-role-banner" hidden></p>
-      <p class="timer-inline" id="wl-timer" hidden></p>
       <div id="wl-body"></div>
     `;
-  }
-
-  function stopTimerDisplay(container) {
-    if (timerInterval) clearInterval(timerInterval);
-    timerInterval = null;
-    container.querySelector('#wl-timer').hidden = true;
-  }
-
-  function startTimerDisplay(container, { startedAt, durationMs, label }) {
-    const timerEl = container.querySelector('#wl-timer');
-    timerEl.hidden = false;
-    function tick() {
-      const remainingMs = Math.max(0, startedAt + durationMs - Date.now());
-      const totalSeconds = Math.ceil(remainingMs / 1000);
-      timerEl.textContent = `${label || 'Time'}: ${totalSeconds}s`;
-      if (remainingMs <= 0 && timerInterval) {
-        clearInterval(timerInterval);
-        timerInterval = null;
-      }
-    }
-    if (timerInterval) clearInterval(timerInterval);
-    tick();
-    timerInterval = setInterval(tick, 250);
   }
 
   function spectrumText(payload) {
     return payload.left && payload.right ? `${payload.left} ←→ ${payload.right}` : '';
   }
 
-  function update(container, socket, payload) {
+  function update(container, socket, payload, helpers) {
     if (payload.role) myRole = payload.role;
     if (payload.target) myTarget = payload.target;
 
@@ -50,7 +25,6 @@
     const bodyEl = container.querySelector('#wl-body');
 
     if (payload.phase === 'pending') {
-      stopTimerDisplay(container);
       myRole = null;
       myTarget = null;
       hasGuessed = false;
@@ -86,7 +60,6 @@
     }
 
     if (payload.phase === 'guessing') {
-      if (payload.timer) startTimerDisplay(container, payload.timer);
       if (payload.clue) {
         roleBanner.hidden = false;
         roleBanner.className = 'status-banner active';
@@ -118,12 +91,15 @@
     }
 
     if (payload.phase === 'reveal') {
-      stopTimerDisplay(container);
       roleBanner.hidden = false;
       roleBanner.className = 'status-banner active';
       roleBanner.textContent = `Target was ${payload.target}/10 — clue: "${payload.clue}"`;
 
-      const mine = payload.results ? payload.results[localStorage.getItem('vg_playerId')] : null;
+      // Reads the live, connection-tied id rather than localStorage directly —
+      // several browser tabs share one localStorage, so a tab reading it raw
+      // right as another tab joins/rejoins could momentarily see the wrong
+      // id. Same fix already applied to Spyfall/Imposter's self-id lookups.
+      const mine = payload.results ? payload.results[helpers.getSelfId()] : null;
       let mineHtml = '';
       if (mine) {
         mineHtml = `<p class="subtitle">Your guess: ${mine.guess} — +${mine.points} points.</p>`;

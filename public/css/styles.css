@@ -63,6 +63,11 @@ input[type="text"]:focus {
   border-color: #667eea;
 }
 
+input[type="range"] {
+  width: 100%;
+  margin-bottom: 10px;
+}
+
 button {
   width: 100%;
   padding: 15px;
