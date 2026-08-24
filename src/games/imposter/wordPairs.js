@@ -1,0 +1,25 @@
+// The Imposter sees `decoy` instead of `real` — close enough to the same
+// category that they can bluff a plausible clue without knowing it's wrong.
+module.exports = [
+  { id: 'pizza-burger', real: 'Pizza', decoy: 'Hamburger' },
+  { id: 'coffee-tea', real: 'Coffee', decoy: 'Tea' },
+  { id: 'dog-cat', real: 'Dog', decoy: 'Cat' },
+  { id: 'beach-mountain', real: 'Beach', decoy: 'Mountain' },
+  { id: 'summer-winter', real: 'Summer', decoy: 'Winter' },
+  { id: 'guitar-piano', real: 'Guitar', decoy: 'Piano' },
+  { id: 'soccer-basketball', real: 'Soccer', decoy: 'Basketball' },
+  { id: 'batman-superman', real: 'Batman', decoy: 'Superman' },
+  { id: 'harry-potter-lotr', real: 'Harry Potter', decoy: 'Lord of the Rings' },
+  { id: 'sushi-tacos', real: 'Sushi', decoy: 'Tacos' },
+  { id: 'netflix-youtube', real: 'Netflix', decoy: 'YouTube' },
+  { id: 'ocean-desert', real: 'Ocean', decoy: 'Desert' },
+  { id: 'library-gym', real: 'Library', decoy: 'Gym' },
+  { id: 'wine-beer', real: 'Wine', decoy: 'Beer' },
+  { id: 'camping-fishing', real: 'Camping', decoy: 'Fishing' },
+  { id: 'chess-checkers', real: 'Chess', decoy: 'Checkers' },
+  { id: 'ice-cream-cake', real: 'Ice Cream', decoy: 'Cake' },
+  { id: 'car-bicycle', real: 'Car', decoy: 'Bicycle' },
+  { id: 'airplane-train', real: 'Airplane', decoy: 'Train' },
+  { id: 'doctor-teacher', real: 'Doctor', decoy: 'Teacher' },
+  { id: 'castle-cabin', real: 'Castle', decoy: 'Cabin' },
+];

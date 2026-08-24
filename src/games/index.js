@@ -3,8 +3,9 @@
 const demoGame = require('./demoGame/server');
 const higherLower = require('./higherLower/server');
 const spyfall = require('./spyfall/server');
+const imposter = require('./imposter/server');
 
-const games = [demoGame, higherLower, spyfall];
+const games = [demoGame, higherLower, spyfall, imposter];
 const gamesById = Object.fromEntries(games.map((game) => [game.meta.id, game]));
 
 module.exports = { games, gamesById };

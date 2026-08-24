@@ -325,6 +325,18 @@ button.secondary:hover {
   padding: clamp(16px, 2.4vh, 32px) 10px;
 }
 
+.clue-log {
+  list-style: none;
+  margin-bottom: 15px;
+}
+
+.clue-log li {
+  background: #f7f7f7;
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin-bottom: 6px;
+}
+
 .timer-inline {
   text-align: center;
   font-weight: bold;
