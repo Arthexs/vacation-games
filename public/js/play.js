@@ -8,7 +8,7 @@ const leaderboardEl = document.getElementById('leaderboard');
 const gameSection = document.getElementById('gameSection');
 
 // Each public/games/<id>/play.js registers itself here on load, e.g.:
-//   window.__vgGames['demoGame'] = { render(container, socket), update(container, socket, payload) }
+//   window.__vgGames['demoGame'] = { render(container, socket, helpers), update(container, socket, payload, helpers) }
 window.__vgGames = window.__vgGames || {};
 const loadedGameScripts = new Set();
 
@@ -17,6 +17,12 @@ let currentGameId = null;
 // Replayed into a game's update() once its script finishes loading, so a client that
 // joins/reconnects mid-round doesn't miss the game:update its start() already sent.
 let lastGameUpdatePayload = null;
+let players = [];
+
+// A game whose UI needs to show/pick other players (Spyfall/Imposter's vote,
+// Heads Up!'s spectator list) needs the current player list, which nothing
+// exposed to a game module before — mirrors admin.js's helpers.renderPlayerPicker.
+const gameHelpers = { getPlayers: () => players };
 
 function escapeHtml(str) {
   const div = document.createElement('div');
@@ -75,8 +81,8 @@ function enterGame(gameId) {
     const handlers = window.__vgGames[gameId];
     if (!handlers) return;
     gameSection.innerHTML = '';
-    if (handlers.render) handlers.render(gameSection, socket);
-    if (handlers.update && lastGameUpdatePayload) handlers.update(gameSection, socket, lastGameUpdatePayload);
+    if (handlers.render) handlers.render(gameSection, socket, gameHelpers);
+    if (handlers.update && lastGameUpdatePayload) handlers.update(gameSection, socket, lastGameUpdatePayload, gameHelpers);
     showGame();
   });
 }
@@ -103,6 +109,7 @@ socket.on('player:rejoinFailed', () => {
 });
 
 socket.on('state:snapshot', (snapshot) => {
+  players = snapshot.players;
   renderLeaderboard(snapshot.players);
   if (snapshot.activeGame) {
     enterGame(snapshot.activeGame.gameId);
@@ -111,7 +118,10 @@ socket.on('state:snapshot', (snapshot) => {
   }
 });
 
-socket.on('state:leaderboard', renderLeaderboard);
+socket.on('state:leaderboard', (updatedPlayers) => {
+  players = updatedPlayers;
+  renderLeaderboard(updatedPlayers);
+});
 
 socket.on('state:activeGame', (activeGame) => {
   if (activeGame) {
@@ -127,7 +137,7 @@ socket.on('game:update', (payload) => {
   lastGameUpdatePayload = payload;
   if (!currentGameId) return;
   const handlers = window.__vgGames[currentGameId];
-  if (handlers && handlers.update) handlers.update(gameSection, socket, payload);
+  if (handlers && handlers.update) handlers.update(gameSection, socket, payload, gameHelpers);
 });
 
 if (!playerId) showJoin();

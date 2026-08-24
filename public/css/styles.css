@@ -325,6 +325,14 @@ button.secondary:hover {
   padding: clamp(16px, 2.4vh, 32px) 10px;
 }
 
+.timer-inline {
+  text-align: center;
+  font-weight: bold;
+  color: #667eea;
+  font-size: 1.3em;
+  margin-bottom: 15px;
+}
+
 .player-picker {
   list-style: none;
   display: flex;

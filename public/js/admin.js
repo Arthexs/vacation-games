@@ -31,6 +31,7 @@ let lastGameUpdatePayload = null;
 // rendering itself — reads the live `players` list via closure, so it always
 // reflects who's currently connected, not a stale snapshot from render time.
 const adminHelpers = {
+  getPlayers: () => players,
   renderPlayerPicker(container, onPick) {
     const ul = document.createElement('ul');
     ul.className = 'player-picker';
