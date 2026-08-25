@@ -7,7 +7,7 @@
   function render(container) {
     container.innerHTML = `
       <h1>Higher or Lower?</h1>
-      <p class="subtitle">Is the next mountain taller or shorter?</p>
+      <p class="subtitle">Did the next one come out earlier or later?</p>
       <div class="hl-cards">
         <div class="hl-card">
           <img class="hl-image" id="hl-current-image" alt="">
@@ -22,8 +22,8 @@
       </div>
       <p class="status-banner" id="hl-status" hidden></p>
       <div class="hl-buttons">
-        <button type="button" id="hl-higher-btn">▲ Higher</button>
-        <button type="button" id="hl-lower-btn">▼ Lower</button>
+        <button type="button" id="hl-higher-btn">▲ Later</button>
+        <button type="button" id="hl-lower-btn">▼ Earlier</button>
       </div>
     `;
   }
@@ -40,10 +40,16 @@
     statusEl.textContent = text;
   }
 
+  // Plain year, no thousands separator (toLocaleString would render 1997 as
+  // "1,997") and no unit suffix — unlike the old mountain pack's meters.
+  function formatYear(value) {
+    return String(value);
+  }
+
   function update(container, socket, payload) {
     container.querySelector('#hl-current-image').src = payload.current.image;
     container.querySelector('#hl-current-name').textContent = payload.current.name;
-    container.querySelector('#hl-current-value').textContent = `${payload.current.value.toLocaleString()} m`;
+    container.querySelector('#hl-current-value').textContent = formatYear(payload.current.value);
 
     container.querySelector('#hl-next-image').src = payload.next.image;
     container.querySelector('#hl-next-name').textContent = payload.next.name;
@@ -68,18 +74,20 @@
     }
 
     // phase === 'reveal'
-    nextValueEl.textContent = `${payload.next.value.toLocaleString()} m`;
+    nextValueEl.textContent = formatYear(payload.next.value);
     setButtonsDisabled(container, true);
     higherBtn.onclick = null;
     lowerBtn.onclick = null;
 
+    const laterOrEarlier = (actual) => (actual === 'higher' ? 'later' : actual === 'lower' ? 'earlier' : 'the same year as');
+
     const mine = payload.results[selfId];
     if (!mine) {
-      showStatus(container, 'waiting', `${payload.next.name} was ${payload.actual} than ${payload.current.name}.`);
+      showStatus(container, 'waiting', `${payload.next.name} came out ${laterOrEarlier(payload.actual)} ${payload.current.name}.`);
     } else if (mine.correct) {
       showStatus(container, 'active', `Correct! Streak: ${mine.streak} — +${mine.pointsEarned} points.`);
     } else {
-      showStatus(container, 'waiting', `Not quite — ${payload.next.name} was ${payload.actual}. Streak reset.`);
+      showStatus(container, 'waiting', `Not quite — ${payload.next.name} came out ${laterOrEarlier(payload.actual)}. Streak reset.`);
     }
   }
 
