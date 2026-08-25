@@ -1,25 +1,32 @@
-// The Imposter sees `decoy` instead of `real` — close enough to the same
-// category that they can bluff a plausible clue without knowing it's wrong.
+// Fandom pack: the Imposter sees `decoy` instead of `real` — each pair is
+// two characters/figures close enough in role or archetype (both chosen-one
+// protagonists, both dark lords, both secret agents, etc.) that the
+// Imposter can bluff a plausible one-word clue without knowing which one
+// the rest of the table actually has. All drawn from franchises in the
+// higher/lower fandom pool.
 module.exports = [
-  { id: 'pizza-burger', real: 'Pizza', decoy: 'Hamburger' },
-  { id: 'coffee-tea', real: 'Coffee', decoy: 'Tea' },
-  { id: 'dog-cat', real: 'Dog', decoy: 'Cat' },
-  { id: 'beach-mountain', real: 'Beach', decoy: 'Mountain' },
-  { id: 'summer-winter', real: 'Summer', decoy: 'Winter' },
-  { id: 'guitar-piano', real: 'Guitar', decoy: 'Piano' },
-  { id: 'soccer-basketball', real: 'Soccer', decoy: 'Basketball' },
-  { id: 'batman-superman', real: 'Batman', decoy: 'Superman' },
-  { id: 'harry-potter-lotr', real: 'Harry Potter', decoy: 'Lord of the Rings' },
-  { id: 'sushi-tacos', real: 'Sushi', decoy: 'Tacos' },
-  { id: 'netflix-youtube', real: 'Netflix', decoy: 'YouTube' },
-  { id: 'ocean-desert', real: 'Ocean', decoy: 'Desert' },
-  { id: 'library-gym', real: 'Library', decoy: 'Gym' },
-  { id: 'wine-beer', real: 'Wine', decoy: 'Beer' },
-  { id: 'camping-fishing', real: 'Camping', decoy: 'Fishing' },
-  { id: 'chess-checkers', real: 'Chess', decoy: 'Checkers' },
-  { id: 'ice-cream-cake', real: 'Ice Cream', decoy: 'Cake' },
-  { id: 'car-bicycle', real: 'Car', decoy: 'Bicycle' },
-  { id: 'airplane-train', real: 'Airplane', decoy: 'Train' },
-  { id: 'doctor-teacher', real: 'Doctor', decoy: 'Teacher' },
-  { id: 'castle-cabin', real: 'Castle', decoy: 'Cabin' },
+  { id: 'luffy-naruto', real: 'Monkey D. Luffy', decoy: 'Naruto Uzumaki' },
+  { id: 'jinwoo-sunny', real: 'Sung Jinwoo', decoy: 'Sunny' },
+  { id: 'harry-percy', real: 'Harry Potter', decoy: 'Percy Jackson' },
+  { id: 'frodo-bilbo', real: 'Frodo Baggins', decoy: 'Bilbo Baggins' },
+  { id: 'voldemort-sauron', real: 'Lord Voldemort', decoy: 'Sauron' },
+  { id: 'bond-loid', real: 'James Bond', decoy: 'Loid Forger' },
+  { id: 'ichigo-yuji', real: 'Ichigo Kurosaki', decoy: 'Yuji Itadori' },
+  { id: 'erza-mikasa', real: 'Erza Scarlet', decoy: 'Mikasa Ackerman' },
+  { id: 'light-aizen', real: 'Light Yagami', decoy: 'Sosuke Aizen' },
+  { id: 'goku-saitama', real: 'Son Goku', decoy: 'Saitama' },
+  { id: 'gandalf-dumbledore', real: 'Gandalf', decoy: 'Albus Dumbledore' },
+  { id: 'aragorn-geralt', real: 'Aragorn', decoy: 'Geralt of Rivia' },
+  { id: 'daenerys-katniss', real: 'Daenerys Targaryen', decoy: 'Katniss Everdeen' },
+  { id: 'edward-alphonse', real: 'Edward Elric', decoy: 'Alphonse Elric' },
+  { id: 'deku-tanjiro', real: 'Izuku Midoriya', decoy: 'Tanjiro Kamado' },
+  { id: 'gojo-yoruichi', real: 'Satoru Gojo', decoy: 'Yoruichi Shihoin' },
+  { id: 'paul-luke', real: 'Paul Atreides', decoy: 'Luke Skywalker' },
+  { id: 'vader-witchking', real: 'Darth Vader', decoy: 'The Witch-king of Angmar' },
+  { id: 'yor-hancock', real: 'Yor Forger', decoy: 'Boa Hancock' },
+  { id: 'kirito-eren', real: 'Kirito', decoy: 'Eren Yeager' },
+  { id: 'denji-anya', real: 'Denji', decoy: 'Anya Forger' },
+  { id: 'ainz-aslan', real: 'Ainz Ooal Gown', decoy: 'Aslan' },
+  { id: 'dokja-bam', real: 'Kim Dokja', decoy: 'Bam' },
+  { id: 'subaru-percy', real: 'Subaru Natsuki', decoy: 'Percy Jackson' },
 ];
