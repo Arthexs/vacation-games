@@ -390,24 +390,6 @@ button.secondary:hover {
   font-weight: bold;
 }
 
-.ww-slots {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-bottom: 15px;
-}
-
-.ww-slot-btn {
-  text-align: left;
-  background: #f7f7f7;
-  color: #333;
-}
-
-.ww-slot-btn.selected {
-  background: #667eea;
-  color: white;
-}
-
 .hu-word {
   text-align: center;
   font-size: 2.4em;

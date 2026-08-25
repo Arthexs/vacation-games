@@ -6,21 +6,33 @@
   function update(container, socket, payload) {
     const bodyEl = container.querySelector('#df-admin-body');
 
-    if (payload.phase === 'draw') {
-      if (payload.timer) {
-        bodyEl.innerHTML = '<p class="status-banner active">Drawing time in progress.</p>';
-      } else {
-        bodyEl.innerHTML = '<button type="button" id="df-start-timer-btn">Start Drawing Timer</button>';
-        bodyEl.querySelector('#df-start-timer-btn').addEventListener('click', () => {
-          socket.emit('admin:action', { type: 'startTimer' });
-        });
-      }
+    if (payload.phase === 'pending') {
+      bodyEl.innerHTML = '<button type="button" id="df-start-timer-btn">Start Round 1</button>';
+      bodyEl.querySelector('#df-start-timer-btn').addEventListener('click', () => {
+        socket.emit('admin:action', { type: 'startTimer' });
+      });
       return;
     }
 
-    // Title/vote timers auto-start for every drawing — no admin action
-    // needed between the draw phase and the game ending.
-    bodyEl.innerHTML = '<p class="subtitle">Reveal in progress — no action needed until the game ends.</p>';
+    if (payload.phase === 'write' || payload.phase === 'draw') {
+      bodyEl.innerHTML = `<p class="status-banner active">Round ${payload.currentRound + 1} of ${payload.totalRounds} in progress — no action needed.</p>`;
+      return;
+    }
+
+    if (payload.phase === 'reveal') {
+      bodyEl.innerHTML = '<button type="button" id="df-reveal-next-btn">Reveal Next</button>';
+      bodyEl.querySelector('#df-reveal-next-btn').addEventListener('click', () => {
+        socket.emit('admin:action', { type: 'revealNext' });
+      });
+      return;
+    }
+
+    if (payload.phase === 'vote') {
+      bodyEl.innerHTML = '<p class="status-banner active">Voting in progress — no action needed.</p>';
+      return;
+    }
+
+    bodyEl.innerHTML = '<p class="subtitle">Every chain has been revealed.</p>';
   }
 
   window.__vgAdminGames = window.__vgAdminGames || {};

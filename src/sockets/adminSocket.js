@@ -68,12 +68,12 @@ module.exports = function registerAdminSocket(io, socket, state, gamesById) {
     broadcastActiveGame(io, state);
 
     // Briefly override /tv with the rules before handing control back to
-    // whatever the game shows next — its own tv:content (Wits & Wagers,
-    // Drawful may have already pushed something in start(), captured below
-    // and restored), or the leaderboard for a game that hasn't pushed
-    // anything yet (Spyfall/Imposter/Heads Up! wait on the admin to pick a
-    // role first). Reference equality on rulesPayload is how the timeout
-    // below tells "nothing has changed since" apart from "the game already
+    // whatever the game shows next — its own tv:content (Drawful, Psych!
+    // may have already pushed something in start(), captured below and
+    // restored), or the leaderboard for a game that hasn't pushed anything
+    // yet (Spyfall/Imposter/Heads Up! wait on the admin to pick a role
+    // first). Reference equality on rulesPayload is how the timeout below
+    // tells "nothing has changed since" apart from "the game already
     // pushed newer content, don't stomp on it."
     const preRulesTvContent = state.activeGame.tvContent || null;
     const rulesPayload = { type: 'rules', title: game.meta.title, rules: game.meta.rules || [] };

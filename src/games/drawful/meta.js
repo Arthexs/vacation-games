@@ -1,12 +1,12 @@
 module.exports = {
   id: 'drawful',
-  title: 'Doodle Deception',
-  description: 'Everyone draws their own silly prompt, then the group tries to spot the real title among the fakes.',
+  title: 'Telephone Doodles',
+  description: 'Everyone starts a chain with a weird prompt, then passes it along — draw what was written, write what you think was drawn — until the group replays every chain from start to finish.',
   rules: [
-    'Everyone privately draws their own silly prompt.',
-    'For each drawing in turn, everyone else writes a fake title while the real one is mixed in.',
-    'Everyone votes for which title they think is the real one.',
-    'Picking the real title scores you points; fooling someone with your fake title scores you points too.',
-    'The artist scores points for each voter who got fooled.',
+    'Everyone starts their own chain by writing a weird prompt.',
+    'Each round your chain gets passed along: draw the last thing written, or write what you think the last drawing shows.',
+    'You only ever see the one entry right before yours — never the whole chain.',
+    'Once every chain has gone all the way around, the group replays each one from start to finish.',
+    'Then everyone votes for their favorite chain (not their own) — votes earn that chain\'s owner bonus points.',
   ],
 };

@@ -3,16 +3,20 @@
   const CANVAS_WIDTH = 500;
   const CANVAS_HEIGHT = 350;
 
-  let myPrompt = null;
-  let canvasBuilt = false; // guards against re-rendering (and wiping) the canvas on a second 'draw' payload
-  let currentDrawingKey = null; // tracks which drawing's title/vote phase we're on, to reset flags per drawing
-  let hasSubmittedTitle = false;
-  let hasVoted = false;
+  let myAssignment = null; // last private payload: {phase, currentRound, totalRounds, isFirstEntry, prevEntry}
+  let uiRoundKey = null; // `${phase}-${currentRound}` the body is currently built for — guards against wiping in-progress input on a timer-only re-update
+  let hasSubmitted = false;
+  let chainVoteBuilt = false; // guards against rebuilding (and losing hasVotedChain's rendered state) on the timer-only re-update
+  let hasVotedChain = false;
   let timerInterval = null;
+
+  function escapeHtml(str) {
+    return String(str).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  }
 
   function render(container) {
     container.innerHTML = `
-      <h1>Doodle Deception</h1>
+      <h1>Telephone Doodles</h1>
       <p class="subtitle" id="df-status-text"></p>
       <p class="timer-inline" id="df-timer" hidden></p>
       <div id="df-body"></div>
@@ -42,9 +46,10 @@
     timerInterval = setInterval(tick, 250);
   }
 
-  function buildDrawUi(container, socket) {
-    const bodyEl = container.querySelector('#df-body');
+  function buildDrawUi(bodyEl, socket, assignment) {
+    const prev = assignment.prevEntry;
     bodyEl.innerHTML = `
+      <p class="subtitle">Draw: &ldquo;${escapeHtml(prev.text)}&rdquo;</p>
       <canvas id="df-canvas" width="${CANVAS_WIDTH}" height="${CANVAS_HEIGHT}" class="df-canvas"></canvas>
       <div class="hl-buttons">
         <button type="button" id="df-clear-btn" class="secondary">Clear</button>
@@ -93,136 +98,142 @@
     bodyEl.querySelector('#df-submit-btn').addEventListener('click', () => {
       const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
       socket.emit('player:action', { drawingDataUrl: dataUrl });
+      hasSubmitted = true;
       bodyEl.innerHTML = '<p class="status-banner waiting">Drawing submitted — waiting for everyone else...</p>';
     });
   }
 
-  function renderTitlePhase(container, socket, payload) {
-    const bodyEl = container.querySelector('#df-body');
-    const isArtist = payload.artistId === selfId;
-
-    if (isArtist) {
-      bodyEl.innerHTML = `
-        <img class="df-drawing" src="${payload.drawingDataUrl}" alt="Your drawing">
-        <p class="status-banner waiting">Everyone's writing fake titles for your drawing!</p>
-      `;
-      return;
-    }
-    if (hasSubmittedTitle) {
-      bodyEl.innerHTML = `<img class="df-drawing" src="${payload.drawingDataUrl}" alt="A drawing"><p class="status-banner waiting">Title submitted — waiting for everyone else...</p>`;
-      return;
-    }
+  function buildWriteUi(bodyEl, socket, assignment) {
+    const prev = assignment.prevEntry;
+    const promptHtml = assignment.isFirstEntry
+      ? '<p class="subtitle">Write a weird scenario for someone else to draw.</p>'
+      : `<img class="df-drawing" src="${prev.drawingDataUrl}" alt="A drawing"><p class="subtitle">What do you think this drawing shows?</p>`;
     bodyEl.innerHTML = `
-      <img class="df-drawing" src="${payload.drawingDataUrl}" alt="A drawing">
-      <input type="text" id="df-title-input" placeholder="Write a believable fake title..." maxlength="60">
-      <button type="button" id="df-title-btn">Submit Title</button>
+      ${promptHtml}
+      <input type="text" id="df-text-input" placeholder="${assignment.isFirstEntry ? 'e.g. A confused giraffe doing yoga' : 'Your best guess...'}" maxlength="80">
+      <button type="button" id="df-text-btn">Submit</button>
     `;
     const submit = () => {
-      const input = bodyEl.querySelector('#df-title-input');
-      const title = input.value.trim();
-      if (!title) return;
-      socket.emit('player:action', { title });
-      hasSubmittedTitle = true;
-      renderTitlePhase(container, socket, payload);
+      const input = bodyEl.querySelector('#df-text-input');
+      const text = input.value.trim();
+      if (!text) return;
+      socket.emit('player:action', { text });
+      hasSubmitted = true;
+      bodyEl.innerHTML = '<p class="status-banner waiting">Submitted — waiting for everyone else...</p>';
     };
-    bodyEl.querySelector('#df-title-btn').addEventListener('click', submit);
+    bodyEl.querySelector('#df-text-btn').addEventListener('click', submit);
+    bodyEl.querySelector('#df-text-input').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') submit();
+    });
   }
 
-  function renderVotePhase(container, socket, payload) {
-    const bodyEl = container.querySelector('#df-body');
-    const isArtist = payload.artistId === selfId;
+  function renderEntry(entry) {
+    if (entry.type === 'write') {
+      return `<li>&ldquo;${escapeHtml(entry.text)}&rdquo; <span class="subtitle">— ${escapeHtml(entry.authorName)}</span></li>`;
+    }
+    return `<li><img class="df-drawing" src="${entry.drawingDataUrl}" alt="A drawing"><span class="subtitle">— ${escapeHtml(entry.authorName)}</span></li>`;
+  }
 
-    if (isArtist) {
-      bodyEl.innerHTML = `
-        <img class="df-drawing" src="${payload.drawingDataUrl}" alt="Your drawing">
-        <p class="status-banner waiting">Everyone's voting on your drawing's title!</p>
-      `;
-      return;
-    }
-    if (hasVoted) {
-      bodyEl.innerHTML = `<img class="df-drawing" src="${payload.drawingDataUrl}" alt="A drawing"><p class="status-banner waiting">Vote submitted — waiting for everyone else...</p>`;
-      return;
-    }
-    const optionsHtml = payload.options
-      .map((o, i) => `<button type="button" class="option-btn" data-index="${i}">${o.text}</button>`)
+  function renderReveal(bodyEl, payload) {
+    const rows = payload.entries.map(renderEntry).join('');
+    bodyEl.innerHTML = `<ul class="clue-log">${rows}</ul>`;
+  }
+
+  function renderChainVote(bodyEl, socket, options) {
+    const choices = options.filter((o) => o.id !== selfId);
+    const buttonsHtml = choices
+      .map((o) => `<button type="button" class="option-btn" data-id="${o.id}">${escapeHtml(o.ownerName)}'s chain</button>`)
       .join('');
     bodyEl.innerHTML = `
-      <img class="df-drawing" src="${payload.drawingDataUrl}" alt="A drawing">
-      <p class="subtitle">Which title is the real one?</p>
-      <div id="df-vote-options">${optionsHtml}</div>
+      <p class="subtitle">Which chain was your favorite? (not your own)</p>
+      <div id="df-vote-options">${buttonsHtml}</div>
     `;
     bodyEl.querySelectorAll('.option-btn').forEach((btn) => {
       btn.addEventListener('click', () => {
-        const option = payload.options[Number(btn.dataset.index)];
-        socket.emit('player:action', { vote: option.id });
-        hasVoted = true;
-        renderVotePhase(container, socket, payload);
+        socket.emit('player:action', { voteFor: btn.dataset.id });
+        hasVotedChain = true;
+        bodyEl.innerHTML = '<p class="status-banner waiting">Vote submitted — waiting for everyone else...</p>';
       });
     });
   }
 
-  function renderDrawingResult(container, payload) {
-    const bodyEl = container.querySelector('#df-body');
-    const rows = payload.options
-      .map((o) => {
-        const label = o.id === 'real' ? `<strong>${o.text}</strong> (the real prompt!)` : `${o.text} — ${o.authorName || '?'}`;
-        return `<li>${label} — ${o.votes} vote${o.votes === 1 ? '' : 's'}</li>`;
-      })
+  function renderVoteResults(voteResults) {
+    if (!voteResults || !voteResults.length) return '';
+    const rows = voteResults
+      .map((r) => `<li>${escapeHtml(r.ownerName)}'s chain — ${r.votes} vote${r.votes === 1 ? '' : 's'}</li>`)
       .join('');
-    bodyEl.innerHTML = `
-      <img class="df-drawing" src="${payload.drawingDataUrl}" alt="A drawing">
-      <p class="status-banner active">${payload.artistName}'s drawing was: "${payload.realTitle}"</p>
-      <ul class="clue-log">${rows}</ul>
-    `;
+    return `<p class="subtitle">Favorite chain results:</p><ul class="clue-log">${rows}</ul>`;
   }
 
   function update(container, socket, payload) {
-    if (payload.prompt) myPrompt = payload.prompt;
     const statusText = container.querySelector('#df-status-text');
     const bodyEl = container.querySelector('#df-body');
 
-    if (payload.phase === 'draw') {
-      statusText.textContent = myPrompt ? `Draw: "${myPrompt}"` : '';
+    if (payload.phase === 'pending') {
+      stopTimerDisplay(container);
+      myAssignment = null;
+      uiRoundKey = null;
+      chainVoteBuilt = false;
+      hasVotedChain = false;
+      statusText.textContent = `Waiting for the gamemaster to start — ${payload.totalRounds || '?'} rounds`;
+      bodyEl.innerHTML = '<p class="status-banner waiting">Get ready to write something weird!</p>';
+      return;
+    }
+
+    if (payload.phase === 'write' || payload.phase === 'draw') {
+      if ('prevEntry' in payload) {
+        myAssignment = payload;
+        hasSubmitted = false;
+        uiRoundKey = null; // force a rebuild for the new round
+      }
       if (payload.timer) startTimerDisplay(container, payload.timer);
-      if (!canvasBuilt) {
-        buildDrawUi(container, socket);
-        canvasBuilt = true;
+
+      statusText.textContent = payload.phase === 'draw'
+        ? 'Draw what was written'
+        : (myAssignment && myAssignment.isFirstEntry ? 'Write something weird' : 'What do you think this is?');
+
+      if (hasSubmitted) {
+        bodyEl.innerHTML = '<p class="status-banner waiting">Submitted — waiting for everyone else...</p>';
+        return;
+      }
+
+      const roundKey = `${payload.phase}-${payload.currentRound}`;
+      if (uiRoundKey !== roundKey && myAssignment) {
+        uiRoundKey = roundKey;
+        if (payload.phase === 'write') {
+          buildWriteUi(bodyEl, socket, myAssignment);
+        } else {
+          buildDrawUi(bodyEl, socket, myAssignment);
+        }
       }
       return;
     }
 
-    canvasBuilt = false; // left the draw phase — reset in case it's ever entered again
-
-    if (payload.phase === 'title') {
-      if (payload.artistId !== currentDrawingKey) {
-        currentDrawingKey = payload.artistId;
-        hasSubmittedTitle = false;
-        hasVoted = false;
-      }
-      statusText.textContent = 'Guess titles for this drawing';
-      if (payload.timer) startTimerDisplay(container, payload.timer);
-      renderTitlePhase(container, socket, payload);
+    if (payload.phase === 'reveal') {
+      stopTimerDisplay(container);
+      statusText.textContent = `Chain ${payload.chainNumber} of ${payload.totalChains} — started by ${payload.ownerName}`;
+      renderReveal(bodyEl, payload);
       return;
     }
 
     if (payload.phase === 'vote') {
-      statusText.textContent = 'Vote for the real prompt';
       if (payload.timer) startTimerDisplay(container, payload.timer);
-      renderVotePhase(container, socket, payload);
-      return;
-    }
-
-    if (payload.phase === 'drawingResult') {
-      stopTimerDisplay(container);
-      statusText.textContent = 'Results';
-      renderDrawingResult(container, payload);
+      statusText.textContent = 'Vote for your favorite chain';
+      if (hasVotedChain) {
+        bodyEl.innerHTML = '<p class="status-banner waiting">Vote submitted — waiting for everyone else...</p>';
+        return;
+      }
+      if (!chainVoteBuilt) {
+        chainVoteBuilt = true;
+        renderChainVote(bodyEl, socket, payload.options);
+      }
       return;
     }
 
     if (payload.phase === 'gameOver') {
       stopTimerDisplay(container);
-      statusText.textContent = 'All done!';
-      bodyEl.innerHTML = '<p class="subtitle">Every drawing has been shown. Ask the gamemaster to end the game.</p>';
+      statusText.textContent = payload.noPlayers ? 'No players connected.' : 'Every chain has been revealed!';
+      bodyEl.innerHTML = `${renderVoteResults(payload.voteResults)}<p class="subtitle">Ask the gamemaster to end the game.</p>`;
     }
   }
 

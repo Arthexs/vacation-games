@@ -1,6 +1,6 @@
 # Vacation Games — New Game Specs
 
-Companion to `ARCHITECTURE.md` and `CLAUDE.md` — read both first. This file specs out the six party games discussed, in the order they should be built. Each spec assumes the existing core contract (`meta` / `start(io, state)` / `stop(io, state)` / `handleAction(io, state, playerId, payload)`, `state.activeGame.roundState` owned entirely by the game module, `broadcastGameUpdate` for room-wide updates, direct `io.to(player.socketId).emit(...)` for player-only updates) and follows `demoGame`'s folder shape: `src/games/<name>/` (meta + server logic) and `public/games/<name>/` (client rendering).
+Companion to `ARCHITECTURE.md` and `CLAUDE.md` — read both first. This file specs out the seven party games discussed, in the order they should be built. Each spec assumes the existing core contract (`meta` / `start(io, state)` / `stop(io, state)` / `handleAction(io, state, playerId, payload)`, `state.activeGame.roundState` owned entirely by the game module, `broadcastGameUpdate` for room-wide updates, direct `io.to(player.socketId).emit(...)` for player-only updates) and follows `demoGame`'s folder shape: `src/games/<name>/` (meta + server logic) and `public/games/<name>/` (client rendering).
 
 Decisions from planning discussion, locked in:
 
@@ -160,7 +160,28 @@ Since this game already uses the TV content override (addition #1) for the guess
 
 ---
 
-### 5. Jackbox-Style Drawing (Drawful)
+### 5. Wavelength (Custom Spectrum)
+
+**Roles:** one player = Clue Giver each round, everyone else = Guessers. Per addition #5, the admin picks the Clue Giver — same pattern as Heads Up!'s Guesser and Spyfall's Spy.
+
+**Data:** spectrum pairs, `src/games/wavelength/spectrums.js` — `[{ id, left: 'Things to do with your mum', right: 'Things to do with your dad' }, ...]`. This is a different shape from the `{id, name, image, value}` convention (it's two labeled poles, not a single valued item), which is fine — Wits & Wagers' questions already deviate from that convention too, it was only ever meant for comparison-style games like Higher/Lower.
+
+**Round flow:**
+1. `start()` (and again after each round, while the session continues): pick a random spectrum pair, put the round in a pending state, let the admin pick the next Clue Giver via `admin:action { type: 'assignRole', playerId }`.
+2. `handleAdminAction` picks a random target number 1–10, sends `{ role: 'cluegiver', left, right, target }` to the Clue Giver's socket only; sends `{ role: 'guesser', left, right }` (no target) to everyone else via `broadcastGameUpdate`. The **TV override** shows the spectrum's two labels so the whole room can see the axis they're working with, even before a clue exists.
+3. The Clue Giver submits one clue via `player:action` (`{ clue: 'some word or phrase' }`) — no target-adjacent numbers or hints beyond the one clue. Once submitted, `broadcastGameUpdate` the clue to all Guessers, and push it to the **TV override** too (labels + clue, still no number), which is the natural shared moment for everyone to mull it over out loud.
+4. Admin taps "Start Timer" once the group's had a moment to think — starts the guess window (shared timer helper), which layers its countdown banner on the existing TV content per addition #2.
+5. Each Guesser submits a number 1–10 via `player:action` (`{ guess: n }`), tracked in `roundState.guesses`. A plain `<input type="range">` (1–10) is enough for this — no new drawing-style widget needed, just a slider or number picker in `public/games/wavelength/play.js`.
+6. **Reveal:** once all Guessers have answered (or the timer expires), reveal the actual target — push it to the **TV override** alongside every Guesser's submitted number plotted on the same 1–10 scale (this is the game's spectacle moment, worth the TV real estate). Score each Guesser by closeness — e.g. `max(0, 3 - abs(guess - target))` gives 3 points for an exact hit, tapering to 0 — and give the Clue Giver points based on how well the group did overall (e.g. the average or sum of Guessers' points), which rewards giving a clue that's specific enough to land, not so exact it gives the number away outright.
+7. `broadcastLeaderboard`, `clearTvContent`, go back to step 1 and wait for the admin to pick the next Clue Giver.
+
+**Minimum players:** at least 2 (1 Clue Giver + 1 Guesser), but noticeably more fun at 3+ since the reveal comparing everyone's guesses is the whole payoff.
+
+**Open calls for the user:** the exact points-per-distance curve in step 6, and the exact formula for the Clue Giver's points (average vs. sum vs. a flat bonus if the group's guesses cluster tightly around the target).
+
+---
+
+### 6. Jackbox-Style Drawing (Drawful)
 
 **Roles:** every player draws each round (their own private prompt); during voting, everyone except the current drawing's author votes.
 

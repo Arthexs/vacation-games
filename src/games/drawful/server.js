@@ -1,12 +1,17 @@
-// The most complex roundState of the six games: draw (once, everyone
-// simultaneously) -> loop per submitted drawing (title -> vote ->
-// drawingResult) -> gameOver. Per GAME_PLANS.md's own suggested middle
-// ground: only the draw phase's timer is admin-triggered (the "settle in"
-// pause matters there); the title and vote timers for each drawing
-// auto-start, since requiring an admin tap before every single drawing's
-// title/vote window would get repetitive fast.
+// Telephone-style chain game (like Gartic Phone): every player starts their
+// own "book" with a written prompt, then each round every book gets passed
+// to a different player who alternately draws the last entry or writes what
+// they think the last drawing shows. With n connected players the game runs
+// exactly n rounds, so every book passes through every player exactly once
+// (round 0 = the owner's own prompt) — the rotation `bookIndex = (i - round)
+// mod n` guarantees each player touches a different book every round and
+// never repeats one. Unlike the old vote-based Drawful, players never see a
+// chain's full history, only the single entry immediately before theirs —
+// that's what makes the final reveal (played back book by book, entry by
+// entry) worth watching. Because every player is busy on a different book
+// every round, there's no single shared "drawing" to put on /tv during
+// rounds — the TV content override only kicks in for the reveal itself.
 const meta = require('./meta');
-const prompts = require('./prompts');
 const {
   broadcastLeaderboard,
   broadcastGameUpdate,
@@ -16,13 +21,11 @@ const {
 } = require('../../broadcast');
 const { startTimer } = require('../../timer');
 
-const DRAW_SECONDS = 60; // not specced
-const TITLE_SECONDS = 30;
+const WRITE_SECONDS = 45;
+const DRAW_SECONDS = 75;
 const VOTE_SECONDS = 20;
-const REVEAL_PAUSE_MS = 6000;
-const CORRECT_GUESS_POINTS = 2; // a voter who picks the real prompt
-const TRICK_POINTS = 1; // per vote a fake title fooled someone into picking
-const ARTIST_STUMP_POINTS = 1; // per voter who did NOT pick the real prompt
+const SUBMIT_POINTS = 1; // flat participation point per entry submitted
+const FAVORITE_CHAIN_POINTS = 3; // per vote received, awarded to that chain's owner in the closing vote
 
 function connectedPlayerIds(state) {
   return Object.values(state.players).filter((p) => p.connected).map((p) => p.id);
@@ -37,124 +40,174 @@ function shuffle(array) {
   return copy;
 }
 
+function entryTypeForRound(roundIndex) {
+  return roundIndex % 2 === 0 ? 'write' : 'draw';
+}
+
+function bookIndexForPlayer(round, playerIndex) {
+  const n = round.playerOrder.length;
+  return ((playerIndex - round.currentRound) % n + n) % n;
+}
+
 function start(io, state) {
-  const connectedIds = connectedPlayerIds(state);
-  const assignments = {};
-  connectedIds.forEach((id) => {
-    assignments[id] = prompts[Math.floor(Math.random() * prompts.length)].id;
-  });
+  const playerOrder = shuffle(connectedPlayerIds(state));
+  const n = playerOrder.length;
+
+  if (n === 0) {
+    state.activeGame.roundState = null;
+    broadcastGameUpdate(io, state, { phase: 'gameOver', noPlayers: true });
+    return;
+  }
+
+  const books = {};
+  playerOrder.forEach((id) => { books[id] = { ownerId: id, entries: [] }; });
 
   state.activeGame.roundState = {
-    phase: 'draw', // draw -> title -> vote -> drawingResult -> (loop) -> gameOver
-    assignments, // playerId -> promptId, fixed for the whole game session
-    drawings: {}, // playerId -> dataURL
-    artistOrder: [], // built once the draw phase closes: only players who actually submitted
-    currentDrawingIndex: 0,
-    currentArtistId: null,
-    currentPrompt: null,
-    fakeTitles: {}, // playerId -> title text, reset per drawing
-    shuffledTitles: [], // [{id: 'real' | playerId, text}], reset per drawing
-    votes: {}, // voterPlayerId -> the option id they voted for, reset per drawing
+    phase: 'pending', // pending -> write/draw (loop, n rounds) -> reveal -> vote -> gameOver
+    playerOrder, // fixed for the whole session; also the book-reveal order
+    totalRounds: n,
+    currentRound: 0,
+    books, // ownerId -> { ownerId, entries: [{type: 'write'|'draw', by, text?, drawingDataUrl?}] }
+    submissions: {}, // playerId -> true, reset each round
     timerHandle: null,
-    revealTimeoutId: null,
+    revealBookIndex: 0,
+    revealEntryIndex: 0,
+    chainVotes: {}, // voterPlayerId -> the chain-owner playerId they voted for
   };
 
-  connectedIds.forEach((id) => {
-    const prompt = prompts.find((p) => p.id === assignments[id]);
-    sendPlayerUpdate(io, state, id, { phase: 'draw', prompt: prompt.text });
-  });
+  broadcastGameUpdate(io, state, { phase: 'pending', totalRounds: n });
 }
 
 function stop(io, state) {
   const round = state.activeGame.roundState;
   if (round && round.timerHandle) round.timerHandle.clear();
-  // Otherwise, ending the game mid-reveal-pause leaves this scheduled — it
-  // would fire later and crash trying to read the now-null roundState.
-  if (round && round.revealTimeoutId) clearTimeout(round.revealTimeoutId);
   clearTvContent(io, state);
   state.activeGame.roundState = null;
 }
 
-function closeDrawPhase(io, state) {
+function beginRound(io, state, roundIndex) {
   const round = state.activeGame.roundState;
-  if (round.timerHandle) {
-    round.timerHandle.clear();
-    round.timerHandle = null;
-  }
-  round.artistOrder = Object.keys(round.drawings);
-  round.currentDrawingIndex = 0;
+  round.currentRound = roundIndex;
+  round.submissions = {};
+  const entryType = entryTypeForRound(roundIndex);
+  round.phase = entryType;
 
-  if (round.artistOrder.length === 0) {
-    round.phase = 'gameOver';
-    broadcastGameUpdate(io, state, { phase: 'gameOver', noDrawings: true });
-    return;
-  }
-  startDrawingReveal(io, state);
-}
-
-// Nothing secret at this point (fake-title authorship isn't revealed until
-// the final drawingResult), so — unlike start()'s private prompt delivery —
-// everything from here on is a plain room-wide broadcast. A client compares
-// `artistId` to its own id locally to decide whether to show the
-// title/vote controls or a "waiting" message, same pattern imposter's play.js
-// already uses for turn order.
-function startDrawingReveal(io, state) {
-  const round = state.activeGame.roundState;
-  const artistId = round.artistOrder[round.currentDrawingIndex];
-  round.currentArtistId = artistId;
-  round.currentPrompt = prompts.find((p) => p.id === round.assignments[artistId]).text;
-  round.fakeTitles = {};
-  round.shuffledTitles = [];
-  round.votes = {};
-  round.phase = 'title';
-
-  const drawingDataUrl = round.drawings[artistId];
-  const payload = { phase: 'title', drawingDataUrl, artistId };
-  broadcastGameUpdate(io, state, payload);
-  broadcastTvContent(io, state, payload);
+  round.playerOrder.forEach((playerId, i) => {
+    const book = round.books[round.playerOrder[bookIndexForPlayer(round, i)]];
+    const prevEntry = book.entries[book.entries.length - 1] || null;
+    sendPlayerUpdate(io, state, playerId, {
+      phase: entryType,
+      currentRound: roundIndex,
+      totalRounds: round.totalRounds,
+      isFirstEntry: roundIndex === 0,
+      prevEntry,
+    });
+  });
 
   round.timerHandle = startTimer(io, state, {
-    seconds: TITLE_SECONDS,
-    label: 'Write a fake title',
-    onComplete: () => closeTitlePhase(io, state),
+    seconds: entryType === 'draw' ? DRAW_SECONDS : WRITE_SECONDS,
+    label: entryType === 'draw' ? 'Drawing time' : 'Writing time',
+    onComplete: () => closeRound(io, state),
   });
-  broadcastGameUpdate(io, state, { ...payload, timer: round.timerHandle.timer });
+  // No entry content here — safe to broadcast; each player already cached
+  // their own private assignment from the sendPlayerUpdate loop above.
+  broadcastGameUpdate(io, state, {
+    phase: entryType,
+    currentRound: roundIndex,
+    totalRounds: round.totalRounds,
+    timer: round.timerHandle.timer,
+  });
 }
 
-function closeTitlePhase(io, state) {
+function closeRound(io, state) {
   const round = state.activeGame.roundState;
   if (round.timerHandle) {
     round.timerHandle.clear();
     round.timerHandle = null;
   }
+  broadcastLeaderboard(io, state);
+  if (round.currentRound + 1 >= round.totalRounds) {
+    startReveal(io, state);
+    return;
+  }
+  beginRound(io, state, round.currentRound + 1);
+}
 
-  const options = [{ id: 'real', text: round.currentPrompt }];
-  Object.entries(round.fakeTitles).forEach(([playerId, title]) => {
-    options.push({ id: playerId, text: title });
-  });
-  round.shuffledTitles = shuffle(options);
-  round.phase = 'vote';
-
+function broadcastReveal(io, state) {
+  const round = state.activeGame.roundState;
+  const bookId = round.playerOrder[round.revealBookIndex];
+  const book = round.books[bookId];
+  const owner = state.players[bookId];
+  const entries = book.entries.slice(0, round.revealEntryIndex + 1).map((e) => ({
+    type: e.type,
+    text: e.text || null,
+    drawingDataUrl: e.drawingDataUrl || null,
+    authorName: state.players[e.by] ? state.players[e.by].name : '???',
+  }));
   const payload = {
-    phase: 'vote',
-    drawingDataUrl: round.drawings[round.currentArtistId],
-    artistId: round.currentArtistId,
-    options: round.shuffledTitles,
+    phase: 'reveal',
+    chainNumber: round.revealBookIndex + 1,
+    totalChains: round.playerOrder.length,
+    ownerName: owner ? owner.name : '???',
+    entries,
   };
   broadcastGameUpdate(io, state, payload);
   broadcastTvContent(io, state, payload);
+}
+
+function startReveal(io, state) {
+  const round = state.activeGame.roundState;
+  round.phase = 'reveal';
+  round.revealBookIndex = 0;
+  round.revealEntryIndex = 0;
+  broadcastReveal(io, state);
+}
+
+function revealNext(io, state) {
+  const round = state.activeGame.roundState;
+  const book = round.books[round.playerOrder[round.revealBookIndex]];
+  if (round.revealEntryIndex + 1 < book.entries.length) {
+    round.revealEntryIndex += 1;
+    broadcastReveal(io, state);
+    return;
+  }
+  if (round.revealBookIndex + 1 < round.playerOrder.length) {
+    round.revealBookIndex += 1;
+    round.revealEntryIndex = 0;
+    broadcastReveal(io, state);
+    return;
+  }
+  startChainVote(io, state);
+}
+
+// Closing vote: every player picks their favorite chain (identified by
+// whoever started it) other than their own. Skipped entirely with fewer than
+// two players since there'd be no valid choice to vote for.
+function startChainVote(io, state) {
+  const round = state.activeGame.roundState;
+  if (round.playerOrder.length < 2) {
+    finishGame(io, state, []);
+    return;
+  }
+
+  round.phase = 'vote';
+  round.chainVotes = {};
+  const options = round.playerOrder.map((id) => ({
+    id,
+    ownerName: state.players[id] ? state.players[id].name : '???',
+  }));
 
   round.timerHandle = startTimer(io, state, {
     seconds: VOTE_SECONDS,
-    label: 'Vote for the real prompt',
-    onComplete: () => closeVotePhase(io, state),
+    label: 'Vote for your favorite chain',
+    onComplete: () => closeChainVote(io, state),
   });
-  broadcastGameUpdate(io, state, { ...payload, timer: round.timerHandle.timer });
+  const payload = { phase: 'vote', options, timer: round.timerHandle.timer };
+  broadcastGameUpdate(io, state, payload);
+  broadcastTvContent(io, state, payload);
 }
 
-// Not first-past-the-post — every fake title scores by its own vote count
-// independently — so a tie in votes needs no special-casing at all.
-function closeVotePhase(io, state) {
+function closeChainVote(io, state) {
   const round = state.activeGame.roundState;
   if (round.timerHandle) {
     round.timerHandle.clear();
@@ -162,107 +215,83 @@ function closeVotePhase(io, state) {
   }
 
   const voteCounts = {};
-  round.shuffledTitles.forEach((o) => { voteCounts[o.id] = 0; });
-  let correctCount = 0;
-  Object.values(round.votes).forEach((votedForId) => {
+  round.playerOrder.forEach((id) => { voteCounts[id] = 0; });
+  Object.values(round.chainVotes).forEach((votedForId) => {
     voteCounts[votedForId] = (voteCounts[votedForId] || 0) + 1;
-    if (votedForId === 'real') correctCount += 1;
+  });
+  round.playerOrder.forEach((id) => {
+    const votes = voteCounts[id];
+    if (votes > 0 && state.players[id]) state.players[id].score += votes * FAVORITE_CHAIN_POINTS;
   });
 
-  Object.entries(round.votes).forEach(([voterId, votedForId]) => {
-    if (votedForId === 'real' && state.players[voterId]) {
-      state.players[voterId].score += CORRECT_GUESS_POINTS;
-    }
-  });
-  Object.keys(round.fakeTitles).forEach((authorId) => {
-    const tricked = voteCounts[authorId] || 0;
-    if (tricked > 0 && state.players[authorId]) state.players[authorId].score += tricked * TRICK_POINTS;
-  });
-  const totalVoters = Object.keys(round.votes).length;
-  const wrongCount = totalVoters - correctCount;
-  const artist = state.players[round.currentArtistId];
-  if (wrongCount > 0 && artist) artist.score += wrongCount * ARTIST_STUMP_POINTS;
-
-  round.phase = 'drawingResult';
-  const payload = {
-    phase: 'drawingResult',
-    drawingDataUrl: round.drawings[round.currentArtistId],
-    artistId: round.currentArtistId,
-    artistName: artist ? artist.name : null,
-    realTitle: round.currentPrompt,
-    options: round.shuffledTitles.map((o) => ({
-      id: o.id,
-      text: o.text,
-      votes: voteCounts[o.id] || 0,
-      authorName: o.id === 'real' ? null : (state.players[o.id] ? state.players[o.id].name : null),
-    })),
-  };
-  broadcastGameUpdate(io, state, payload);
-  broadcastTvContent(io, state, payload);
-  broadcastLeaderboard(io, state);
-
-  round.revealTimeoutId = setTimeout(() => advanceDrawing(io, state), REVEAL_PAUSE_MS);
+  const voteResults = round.playerOrder
+    .map((id) => ({ ownerId: id, ownerName: state.players[id] ? state.players[id].name : '???', votes: voteCounts[id] }))
+    .sort((a, b) => b.votes - a.votes);
+  finishGame(io, state, voteResults);
 }
 
-function advanceDrawing(io, state) {
+function finishGame(io, state, voteResults) {
   const round = state.activeGame.roundState;
-  round.currentDrawingIndex += 1;
-  if (round.currentDrawingIndex >= round.artistOrder.length) {
-    clearTvContent(io, state);
-    round.phase = 'gameOver';
-    broadcastGameUpdate(io, state, { phase: 'gameOver' });
-    return;
-  }
-  startDrawingReveal(io, state);
+  round.phase = 'gameOver';
+  broadcastLeaderboard(io, state);
+  const payload = { phase: 'gameOver', voteResults };
+  broadcastGameUpdate(io, state, payload);
+  broadcastTvContent(io, state, payload);
 }
 
 function handleAdminAction(io, state, payload) {
   const round = state.activeGame && state.activeGame.roundState;
-  if (!round || payload.type !== 'startTimer') return;
-  if (round.phase !== 'draw' || round.timerHandle) return;
+  if (!round) return;
 
-  round.timerHandle = startTimer(io, state, {
-    seconds: DRAW_SECONDS,
-    label: 'Drawing time',
-    onComplete: () => closeDrawPhase(io, state),
-  });
-  // No prompt content here — safe to broadcast; each player already has
-  // their own prompt cached client-side from the private send in start().
-  broadcastGameUpdate(io, state, { phase: 'draw', timer: round.timerHandle.timer });
+  if (payload.type === 'startTimer') {
+    if (round.phase !== 'pending' || round.timerHandle) return;
+    beginRound(io, state, 0);
+    return;
+  }
+
+  if (payload.type === 'revealNext') {
+    if (round.phase !== 'reveal') return;
+    revealNext(io, state);
+  }
 }
 
 function handleAction(io, state, playerId, payload) {
   const round = state.activeGame && state.activeGame.roundState;
   if (!round) return;
 
-  if (typeof payload.drawingDataUrl === 'string') {
-    if (round.phase !== 'draw' || round.drawings[playerId]) return;
-    round.drawings[playerId] = payload.drawingDataUrl;
-    const connectedIds = connectedPlayerIds(state);
-    if (connectedIds.every((id) => round.drawings[id])) closeDrawPhase(io, state);
+  if (round.phase === 'vote') {
+    if (typeof payload.voteFor !== 'string') return;
+    if (payload.voteFor === playerId) return; // can't vote for your own chain
+    if (round.chainVotes[playerId]) return;
+    if (!round.playerOrder.includes(payload.voteFor)) return;
+    round.chainVotes[playerId] = payload.voteFor;
+    const requiredVoters = round.playerOrder.filter((id) => state.players[id] && state.players[id].connected);
+    if (requiredVoters.every((id) => round.chainVotes[id])) closeChainVote(io, state);
     return;
   }
 
-  if (typeof payload.title === 'string') {
-    if (round.phase !== 'title' || playerId === round.currentArtistId) return;
-    if (round.fakeTitles[playerId]) return;
-    const title = payload.title.trim();
-    if (!title) return;
-    round.fakeTitles[playerId] = title;
-    const others = connectedPlayerIds(state).filter((id) => id !== round.currentArtistId);
-    if (others.every((id) => round.fakeTitles[id])) closeTitlePhase(io, state);
-    return;
+  if (round.phase !== 'write' && round.phase !== 'draw') return;
+  if (round.submissions[playerId]) return;
+
+  const i = round.playerOrder.indexOf(playerId);
+  if (i === -1) return; // joined after the chain started — no assigned book this game
+  const book = round.books[round.playerOrder[bookIndexForPlayer(round, i)]];
+
+  if (round.phase === 'write') {
+    if (typeof payload.text !== 'string') return;
+    const text = payload.text.trim();
+    if (!text) return;
+    book.entries.push({ type: 'write', by: playerId, text });
+  } else {
+    if (typeof payload.drawingDataUrl !== 'string') return;
+    book.entries.push({ type: 'draw', by: playerId, drawingDataUrl: payload.drawingDataUrl });
   }
 
-  if (payload.vote) {
-    if (round.phase !== 'vote' || playerId === round.currentArtistId) return;
-    if (round.votes[playerId]) return;
-    const validIds = round.shuffledTitles.map((o) => o.id);
-    if (!validIds.includes(payload.vote)) return;
-    round.votes[playerId] = payload.vote;
-    const others = connectedPlayerIds(state).filter((id) => id !== round.currentArtistId);
-    if (others.every((id) => round.votes[id])) closeVotePhase(io, state);
-  }
+  round.submissions[playerId] = true;
+  if (state.players[playerId]) state.players[playerId].score += SUBMIT_POINTS;
+
+  const requiredIds = round.playerOrder.filter((id) => state.players[id] && state.players[id].connected);
+  if (requiredIds.every((id) => round.submissions[id])) closeRound(io, state);
 }
 
 module.exports = { meta, start, stop, handleAction, handleAdminAction };
