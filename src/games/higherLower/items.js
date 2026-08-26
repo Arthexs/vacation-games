@@ -9,11 +9,15 @@
 // fact that's genuinely comparable across every format here without unit
 // conversion, playing the same role elevation played for the mountain pack.
 // Web-original titles (Solo Leveling, Shadow Slave, Overlord, Re:Zero, Sword
-// Art Online, Omniscient Reader's Viewpoint, Tower of God, One Punch Man)
-// are dated to their web serialization start, not a later print release.
-// Years are sourced from general knowledge at build time (Aug 2026) — double
-// check any that look off before a party, sourcing can be genuinely fuzzy
-// for some web-original works.
+// Art Online, Omniscient Reader's Viewpoint, Tower of God, One Punch Man,
+// KonoSuba, Mushoku Tensei, The Rising of the Shield Hero, That Time I Got
+// Reincarnated as a Slime, The Wandering Inn, Mother of Learning, He Who
+// Fights With Monsters) are dated to their web serialization start, not a
+// later print release. Years for the last group (added on request, plus
+// Made in Abyss) were confirmed via web search at build time; the rest are
+// sourced from general knowledge at build time (Aug 2026) — double check any
+// that look off before a party, sourcing can be genuinely fuzzy for some
+// web-original works.
 //
 // Images: static/fandom_images/*.jpg are Claude-generated placeholder title
 // cards (gradient + title text), NOT real cover art/posters — this session's
@@ -22,7 +26,7 @@
 // these exact filenames (<id>.jpg) to replace a placeholder; nothing else
 // needs to change.
 //
-// 32 items, comfortably above GAME_PLANS.md's 30+ guidance for a full party
+// 56 items, well above GAME_PLANS.md's 30+ guidance for a full party
 // without repeats.
 module.exports = [
   { id: 'one-piece', name: 'One Piece', image: '/static/fandom_images/one-piece.jpg', value: 1997 },
@@ -56,5 +60,29 @@ module.exports = [
   { id: 'the-witcher', name: 'The Witcher', image: '/static/fandom_images/the-witcher.jpg', value: 1986 },
   { id: 'hunger-games', name: 'The Hunger Games', image: '/static/fandom_images/hunger-games.jpg', value: 2008 },
   { id: 'percy-jackson', name: 'Percy Jackson', image: '/static/fandom_images/percy-jackson.jpg', value: 2005 },
-  { id: 'narnia', name: 'The Chronicles of Narnia', image: '/static/fandom_images/narnia.jpg', value: 1950 }
+  { id: 'narnia', name: 'The Chronicles of Narnia', image: '/static/fandom_images/narnia.jpg', value: 1950 },
+  { id: 'berserk', name: 'Berserk', image: '/static/fandom_images/berserk.jpg', value: 1989 },
+  { id: 'vinland-saga', name: 'Vinland Saga', image: '/static/fandom_images/vinland-saga.jpg', value: 2005 },
+  { id: 'tokyo-ghoul', name: 'Tokyo Ghoul', image: '/static/fandom_images/tokyo-ghoul.jpg', value: 2011 },
+  { id: 'made-in-abyss', name: 'Made in Abyss', image: '/static/fandom_images/made-in-abyss.jpg', value: 2012 },
+  { id: 'black-clover', name: 'Black Clover', image: '/static/fandom_images/black-clover.jpg', value: 2015 },
+  { id: 'promised-neverland', name: 'The Promised Neverland', image: '/static/fandom_images/promised-neverland.jpg', value: 2016 },
+  { id: 'mob-psycho-100', name: 'Mob Psycho 100', image: '/static/fandom_images/mob-psycho-100.jpg', value: 2012 },
+  { id: 'dr-stone', name: 'Dr. Stone', image: '/static/fandom_images/dr-stone.jpg', value: 2017 },
+  { id: 'konosuba', name: 'KonoSuba', image: '/static/fandom_images/konosuba.jpg', value: 2012 },
+  { id: 'mushoku-tensei', name: 'Mushoku Tensei', image: '/static/fandom_images/mushoku-tensei.jpg', value: 2012 },
+  { id: 'shield-hero', name: 'The Rising of the Shield Hero', image: '/static/fandom_images/shield-hero.jpg', value: 2013 },
+  { id: 'reincarnated-as-a-slime', name: 'That Time I Got Reincarnated as a Slime', image: '/static/fandom_images/reincarnated-as-a-slime.jpg', value: 2013 },
+  { id: 'wandering-inn', name: 'The Wandering Inn', image: '/static/fandom_images/wandering-inn.jpg', value: 2016 },
+  { id: 'mother-of-learning', name: 'Mother of Learning', image: '/static/fandom_images/mother-of-learning.jpg', value: 2011 },
+  { id: 'cradle', name: 'Cradle', image: '/static/fandom_images/cradle.jpg', value: 2016 },
+  { id: 'he-who-fights-with-monsters', name: 'He Who Fights With Monsters', image: '/static/fandom_images/he-who-fights-with-monsters.jpg', value: 2019 },
+  { id: 'discworld', name: 'Discworld', image: '/static/fandom_images/discworld.jpg', value: 1983 },
+  { id: 'mistborn', name: 'Mistborn', image: '/static/fandom_images/mistborn.jpg', value: 2006 },
+  { id: 'name-of-the-wind', name: 'The Name of the Wind', image: '/static/fandom_images/name-of-the-wind.jpg', value: 2007 },
+  { id: 'stormlight-archive', name: 'The Stormlight Archive', image: '/static/fandom_images/stormlight-archive.jpg', value: 2010 },
+  { id: 'foundation', name: 'Foundation', image: '/static/fandom_images/foundation.jpg', value: 1951 },
+  { id: 'hitchhikers-guide', name: "The Hitchhiker's Guide to the Galaxy", image: '/static/fandom_images/hitchhikers-guide.jpg', value: 1979 },
+  { id: 'enders-game', name: "Ender's Game", image: '/static/fandom_images/enders-game.jpg', value: 1985 },
+  { id: 'wheel-of-time', name: 'The Wheel of Time', image: '/static/fandom_images/wheel-of-time.jpg', value: 1990 }
 ];

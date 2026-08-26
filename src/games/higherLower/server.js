@@ -5,7 +5,7 @@ const meta = require('./meta');
 const items = require('./items');
 const { broadcastLeaderboard, broadcastGameUpdate } = require('../../broadcast');
 
-const MAX_STREAK_MULTIPLIER = 5; // points per correct guess = min(streak, this)
+const MAX_STREAK_MULTIPLIER = 2; // points per correct guess = min(streak, this)
 const REVEAL_PAUSE_MS = 3000; // time to see the reveal before the next round starts
 
 function pickRandomItem(pool) {
