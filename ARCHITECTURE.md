@@ -1,6 +1,6 @@
 # Vacation Games — Architecture Plan
 
-Planning document only — no implementation yet. This lays out the project structure and how the pieces talk to each other: Node + Express + Socket.io, three roles (`/admin`, `/play`, `/tv`), LAN-only, in-memory state, no framework on the frontend. Updated with the resolved open decisions below.
+This lays out the project structure and how the pieces talk to each other: Node + Express + Socket.io, three roles (`/admin`, `/play`, `/tv`), LAN-only, in-memory state, no framework on the frontend. Everything described here is built and running — see `CLAUDE.md`'s build order for what's done.
 
 ## Mental model
 
