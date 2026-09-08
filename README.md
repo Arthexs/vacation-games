@@ -62,4 +62,4 @@ Everyone needs to be on the same Wi-Fi/LAN. No accounts, no internet access requ
 
 ## A note on image assets
 
-`static/mountain_images/` and `static/fandom_images/` (used by Higher or Lower and Fake It Til You Make It) are gitignored and not part of this repo. A fresh clone will run, but those two games will be missing their images until that folder is populated separately.
+`static/mountain_images/` (can be used by Higher or Lower and Fake It Til You Make It) are gitignored and not part of this repo. A fresh clone will run, but this game will be missing their images until that folder is populated separately. Added `static/fandom_images/` as an example, because it's only 1.7MB.
